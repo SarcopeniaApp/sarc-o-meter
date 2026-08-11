@@ -1,0 +1,495 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8C2E69FF30298FD700DE0C85 /* Pods_sarc_o_meter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */; };
+		8C2E6A0030298FD700DE0C85 /* Pods_sarc_o_meter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8C2E6B093029F43100DE0C85 /* qwen3.5-2b in Resources */ = {isa = PBXBuildFile; fileRef = 8C2E6B083029F43100DE0C85 /* qwen3.5-2b */; };
+		8C348563302A37D3009AEC7A /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348562302A37D3009AEC7A /* MLXLLM */; };
+		8C348565302A37D3009AEC7A /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348564302A37D3009AEC7A /* MLXLMCommon */; };
+		8C348567302A3CAC009AEC7A /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348566302A3CAC009AEC7A /* MLXHuggingFace */; };
+		8C34856A302A3CC6009AEC7A /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348569302A3CC6009AEC7A /* HuggingFace */; };
+		8C34856D302A3CF0009AEC7A /* Hub in Frameworks */ = {isa = PBXBuildFile; productRef = 8C34856C302A3CF0009AEC7A /* Hub */; };
+		8C34856F302A3CF0009AEC7A /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8C34856E302A3CF0009AEC7A /* Tokenizers */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8C2E6A0130298FD700DE0C85 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				8C2E6A0030298FD700DE0C85 /* Pods_sarc_o_meter.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_sarc_o_meter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F5A977FFF0CCE1E429594F6 /* Pods-sarc-o-meter.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-sarc-o-meter.release.xcconfig"; path = "Target Support Files/Pods-sarc-o-meter/Pods-sarc-o-meter.release.xcconfig"; sourceTree = "<group>"; };
+		8C2E6B083029F43100DE0C85 /* qwen3.5-2b */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "qwen3.5-2b"; sourceTree = "<group>"; };
+		8C799EE530245DFB00EC7C56 /* sarc-o-meter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "sarc-o-meter.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F7E3594694AD1C573D28CA53 /* Pods-sarc-o-meter.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-sarc-o-meter.debug.xcconfig"; path = "Target Support Files/Pods-sarc-o-meter/Pods-sarc-o-meter.debug.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		8C799EE730245DFB00EC7C56 /* sarc-o-meter */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "sarc-o-meter";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8C799EE230245DFB00EC7C56 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C34856D302A3CF0009AEC7A /* Hub in Frameworks */,
+				8C34856F302A3CF0009AEC7A /* Tokenizers in Frameworks */,
+				8C348563302A37D3009AEC7A /* MLXLLM in Frameworks */,
+				8C348565302A37D3009AEC7A /* MLXLMCommon in Frameworks */,
+				8C34856A302A3CC6009AEC7A /* HuggingFace in Frameworks */,
+				8C2E69FF30298FD700DE0C85 /* Pods_sarc_o_meter.framework in Frameworks */,
+				8C348567302A3CAC009AEC7A /* MLXHuggingFace in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		860D9F8C18C5E319A42F8024 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				F7E3594694AD1C573D28CA53 /* Pods-sarc-o-meter.debug.xcconfig */,
+				6F5A977FFF0CCE1E429594F6 /* Pods-sarc-o-meter.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		8C799EDC30245DFB00EC7C56 = {
+			isa = PBXGroup;
+			children = (
+				8C799EE730245DFB00EC7C56 /* sarc-o-meter */,
+				8C799EE630245DFB00EC7C56 /* Products */,
+				860D9F8C18C5E319A42F8024 /* Pods */,
+				9D9F187C05256ED309A57415 /* Frameworks */,
+				8C2E6B083029F43100DE0C85 /* qwen3.5-2b */,
+			);
+			sourceTree = "<group>";
+		};
+		8C799EE630245DFB00EC7C56 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8C799EE530245DFB00EC7C56 /* sarc-o-meter.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9D9F187C05256ED309A57415 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8C799EE430245DFB00EC7C56 /* sarc-o-meter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8C799EF030245DFC00EC7C56 /* Build configuration list for PBXNativeTarget "sarc-o-meter" */;
+			buildPhases = (
+				CC4184BF1443EEC08EDD2959 /* [CP] Check Pods Manifest.lock */,
+				8C799EE130245DFB00EC7C56 /* Sources */,
+				8C799EE230245DFB00EC7C56 /* Frameworks */,
+				8C799EE330245DFB00EC7C56 /* Resources */,
+				8C2E6A0130298FD700DE0C85 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8C799EE730245DFB00EC7C56 /* sarc-o-meter */,
+			);
+			name = "sarc-o-meter";
+			productName = "sarc-o-meter";
+			productReference = 8C799EE530245DFB00EC7C56 /* sarc-o-meter.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8C799EDD30245DFB00EC7C56 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					8C799EE430245DFB00EC7C56 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = 8C799EE030245DFB00EC7C56 /* Build configuration list for PBXProject "sarc-o-meter" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 8C799EDC30245DFB00EC7C56;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8C348561302A37D3009AEC7A /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				8C348568302A3CC6009AEC7A /* XCRemoteSwiftPackageReference "swift-huggingface" */,
+				8C34856B302A3CF0009AEC7A /* XCRemoteSwiftPackageReference "swift-transformers" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 8C799EE630245DFB00EC7C56 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8C799EE430245DFB00EC7C56 /* sarc-o-meter */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8C799EE330245DFB00EC7C56 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C2E6B093029F43100DE0C85 /* qwen3.5-2b in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		CC4184BF1443EEC08EDD2959 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-sarc-o-meter-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8C799EE130245DFB00EC7C56 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		8C799EEE30245DFC00EC7C56 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 4784A2Z39F;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		8C799EEF30245DFC00EC7C56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 4784A2Z39F;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		8C799EF130245DFC00EC7C56 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F7E3594694AD1C573D28CA53 /* Pods-sarc-o-meter.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4784A2Z39F;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kdwiheldy.com.sarc-o-meter";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8C799EF230245DFC00EC7C56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6F5A977FFF0CCE1E429594F6 /* Pods-sarc-o-meter.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4784A2Z39F;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kdwiheldy.com.sarc-o-meter";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8C799EE030245DFB00EC7C56 /* Build configuration list for PBXProject "sarc-o-meter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C799EEE30245DFC00EC7C56 /* Debug */,
+				8C799EEF30245DFC00EC7C56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8C799EF030245DFC00EC7C56 /* Build configuration list for PBXNativeTarget "sarc-o-meter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C799EF130245DFC00EC7C56 /* Debug */,
+				8C799EF230245DFC00EC7C56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8C348561302A37D3009AEC7A /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.4;
+			};
+		};
+		8C348568302A3CC6009AEC7A /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+			traits = (
+			);
+		};
+		8C34856B302A3CF0009AEC7A /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.3;
+			};
+			traits = (
+			);
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8C348562302A37D3009AEC7A /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C348561302A37D3009AEC7A /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		8C348564302A37D3009AEC7A /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C348561302A37D3009AEC7A /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		8C348566302A3CAC009AEC7A /* MLXHuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C348561302A37D3009AEC7A /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXHuggingFace;
+		};
+		8C348569302A3CC6009AEC7A /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C348568302A3CC6009AEC7A /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+		8C34856C302A3CF0009AEC7A /* Hub */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C34856B302A3CF0009AEC7A /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Hub;
+		};
+		8C34856E302A3CF0009AEC7A /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C34856B302A3CF0009AEC7A /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 8C799EDD30245DFB00EC7C56 /* Project object */;
+}

@@ -1,0 +1,20 @@
+# ───────────────────────── macOS ─────────────────────────
+.DS_Store
+
+# ───────────────────────── Xcode ──────────────────────────
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcworkspace/xcuserdata/
+
+# ─────────────────────── CocoaPods ────────────────────────
+# Run `pod install` in sarc-o-meter/ after cloning. Podfile + Podfile.lock are
+# tracked; the downloaded Pods and the generated workspace are not.
+Pods/
+sarc-o-meter.xcworkspace/
+
+# ──────────────── On-device LLM model bundle ───────────────
+# ~4.6 GB Qwen3.5-2B Core ML folder, added to the app target as an Xcode
+# folder reference. Never commit — sideload it locally.
+/qwen3.5-2b/
