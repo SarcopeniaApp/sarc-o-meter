@@ -46,19 +46,12 @@ struct BodyMeasurement: Codable {
     var armCircumferenceCm: Double?
 }
 
-enum MobilityStatus: String, Codable, CaseIterable {
-    case normal = "Normal"
-    case limited = "Limited Mobility / Fall Risk"
-    case unable = "Frail / Unable to Walk"
-}
-
 struct PhysicalTest: Codable {
-    var mobilityStatus: MobilityStatus = .normal
-
-    // Normal mobility: measured directly.
-    var chairStandTestSeconds: Double?
-    var gaitSpeedMetersPerSecond: Double?
-
-    // Limited mobility: TUG used as the alternative performance test.
-    var timedUpAndGoSeconds: Double?
+    // Reps counted in each exercise's timed session; nil = the person skipped
+    // (couldn't do it). Sit-to-stand & calf-raise gauge lower-limb strength;
+    // step-up gauges functional performance. These replace the old clinical
+    // timed tests (chair-stand seconds / gait speed / TUG).
+    var sitToStandReps: Int?
+    var stepUpReps: Int?
+    var calfRaiseReps: Int?
 }

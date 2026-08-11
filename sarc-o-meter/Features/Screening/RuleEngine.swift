@@ -60,31 +60,36 @@ enum RuleEngine {
             }
         }
 
-        // 3. Strength & performance (AWGS 2019).
-        switch data.physicalTest.mobilityStatus {
-        case .unable:
-            result.strengthStatus = .notAssessed
-            result.performanceStatus = .notAssessed
-            result.redFlags.append("Tidak dapat dinilai lewat tes mandiri (Renta). Perlu evaluasi langsung oleh fisioterapis/dokter.")
+        // 3. Strength & performance, scored from the three exercises' reps.
+        //    IMPORTANT: these rep thresholds (counts in a ~10 s session) are
+        //    heuristics, NOT AWGS-validated cutoffs like the old chair-stand/gait
+        //    tests — tune them on real users (the ExerciseLab helps).
+        let pt = data.physicalTest
+        let sitToStandMin = 5   // fewer than this → weak legs
+        let stepUpMin = 4       // functional mobility
+        let calfRaiseMin = 8    // calf strength/endurance
 
-        case .limited:
-            // TUG used as the alternative performance test.
-            if let tug = data.physicalTest.timedUpAndGoSeconds {
-                if tug > 12.0 {
-                    result.performanceStatus = .abnormal
-                    result.redFlags.append("Risiko jatuh tinggi berdasarkan tes TUG > 12 dtk.")
-                } else {
-                    result.performanceStatus = .normal
-                }
-            }
+        // Strength: lower-limb power. Sit-to-stand is primary; a low (present)
+        // calf-raise reinforces it. A *skipped* sit-to-stand ("couldn't do it")
+        // is itself a strong weakness signal.
+        if let sit = pt.sitToStandReps {
+            var low = sit < sitToStandMin
+            if let calf = pt.calfRaiseReps, calf < calfRaiseMin { low = true }
+            result.strengthStatus = low ? .abnormal : .normal
+        } else {
+            result.strengthStatus = .abnormal
+        }
 
-        case .normal:
-            if let chairStand = data.physicalTest.chairStandTestSeconds {
-                result.strengthStatus = chairStand >= 12.0 ? .abnormal : .normal
-            }
-            if let gaitSpeed = data.physicalTest.gaitSpeedMetersPerSecond {
-                result.performanceStatus = gaitSpeed < 1.0 ? .abnormal : .normal
-            }
+        // Performance: functional mobility from the step-up.
+        if let step = pt.stepUpReps {
+            result.performanceStatus = step < stepUpMin ? .abnormal : .normal
+        } else {
+            result.performanceStatus = .abnormal
+        }
+
+        // Any skipped exercise → flag for direct professional evaluation.
+        if pt.sitToStandReps == nil || pt.stepUpReps == nil || pt.calfRaiseReps == nil {
+            result.redFlags.append("Tidak dapat menyelesaikan sebagian tes latihan — perlu evaluasi langsung oleh fisioterapis/dokter.")
         }
 
         // 4. Combine into an overall risk category.

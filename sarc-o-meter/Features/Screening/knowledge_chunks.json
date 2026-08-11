@@ -1,73 +1,100 @@
 [
   {
     "id": "kb_low_muscle_mass_01",
-    "tags": ["low_muscle_mass"],
+    "tags": [
+      "low_muscle_mass"
+    ],
     "source": "AWGS 2019 (Chen LK, et al., J Am Med Dir Assoc 2020)",
     "content": "Lingkar betis yang berada di bawah ambang batas (pria <34cm, wanita <33cm) adalah indikator awal berkurangnya massa otot rangka. Ini bukan pengukuran langsung massa otot (yang idealnya diukur lewat DXA atau BIA), tapi merupakan proxy praktis yang divalidasi untuk keperluan skrining populasi Asia."
   },
   {
     "id": "kb_low_strength_01",
-    "tags": ["low_strength", "low_performance"],
+    "tags": [
+      "low_strength",
+      "low_performance"
+    ],
     "source": "AWGS 2019 (Chen LK, et al., J Am Med Dir Assoc 2020)",
-    "content": "Waktu chair-stand test (5x berdiri-duduk) 12 detik atau lebih mengindikasikan penurunan performa fisik bagian bawah tubuh, yang berkorelasi dengan kekuatan otot kaki dan risiko keterbatasan fungsional sehari-hari seperti naik tangga atau bangkit dari kursi rendah."
+    "content": "Kesulitan berdiri dari kursi berulang kali tanpa bantuan tangan (mis. gerakan berdiri-duduk) mengindikasikan penurunan kekuatan otot kaki bagian bawah, yang berkorelasi dengan risiko keterbatasan fungsional sehari-hari seperti naik tangga atau bangkit dari kursi rendah."
   },
   {
     "id": "kb_low_performance_gait_01",
-    "tags": ["low_performance"],
+    "tags": [
+      "low_performance"
+    ],
     "source": "AWGS 2019 (Chen LK, et al., J Am Med Dir Assoc 2020)",
-    "content": "Kecepatan jalan di bawah 1.0 meter/detik pada jarak 4 meter menunjukkan performa fisik yang menurun. Kecepatan jalan adalah salah satu prediktor kesehatan fungsional jangka panjang yang paling kuat pada populasi lansia."
+    "content": "Kesulitan melakukan gerakan fungsional bagian bawah tubuh (seperti naik-turun step) menunjukkan performa fisik yang menurun. Performa fisik bagian bawah tubuh adalah salah satu prediktor kesehatan fungsional jangka panjang yang penting pada lansia."
   },
   {
     "id": "kb_low_performance_tug_01",
-    "tags": ["low_performance"],
+    "tags": [
+      "low_performance"
+    ],
     "source": "Literatur fall-risk geriatri umum (bukan cutoff resmi AWGS2019/EWGSOP2)",
-    "content": "Timed Up and Go (TUG) di atas 12 detik banyak dipakai sebagai indikator praktis peningkatan risiko jatuh pada lansia. TUG dipakai sebagai alternatif gait speed test untuk orang dengan mobilitas terbatas karena jaraknya lebih pendek dan dianggap lebih aman untuk diuji mandiri."
+    "content": "Kesulitan mengangkat tumit (jinjit) berulang kali menunjukkan penurunan kekuatan dan daya tahan otot betis, yang berkaitan dengan keseimbangan dan risiko jatuh pada lansia."
   },
   {
     "id": "kb_central_obesity_01",
-    "tags": ["central_obesity"],
+    "tags": [
+      "central_obesity"
+    ],
     "source": "Cutoff regional Asia-Pasifik untuk obesitas sentral",
     "content": "Lingkar pinggang di atas ambang batas (pria >=90cm, wanita >=80cm) atau rasio pinggang-tinggi di atas 0.5 mengindikasikan penumpukan lemak sentral/abdominal. Pada orang dengan massa otot rendah, kombinasi ini bisa menandakan sarcopenic obesity — kondisi di mana lemak visceral yang tinggi berasosiasi dengan kualitas otot yang lebih rendah, meski berat badan atau BMI terlihat normal."
   },
   {
     "id": "kb_contraindication_01",
-    "tags": ["contraindication"],
+    "tags": [
+      "contraindication"
+    ],
     "source": "Prinsip keamanan skrining internal, diadaptasi dari praktik pre-participation screening umum",
     "content": "Riwayat operasi besar atau rawat inap dalam 3 bulan terakhir, gejala kardiovaskular tidak stabil, riwayat jatuh berulang, atau kondisi neurologis yang memengaruhi keseimbangan adalah tanda bahwa evaluasi dan program latihan harus disupervisi profesional dulu, terlepas dari kategori risiko sarcopenia yang dihitung."
   },
   {
     "id": "kb_exercise_general_01",
-    "tags": ["general_exercise_principles"],
+    "tags": [
+      "general_exercise_principles"
+    ],
     "source": "ICFSR (Dent E, et al., J Nutr Health Aging 2018); WHO 2020 Guidelines",
     "content": "Latihan resistensi (resistance training) yang menargetkan kelompok otot besar adalah intervensi dengan bukti paling kuat untuk memperlambat atau membalikkan kehilangan massa dan kekuatan otot terkait usia. Guideline internasional merekomendasikan latihan ini dilakukan minimal 2-3 kali per minggu dengan intensitas yang meningkat bertahap (progressive overload)."
   },
   {
     "id": "kb_exercise_balance_01",
-    "tags": ["low_performance", "workout_balance"],
+    "tags": [
+      "low_performance",
+      "workout_balance"
+    ],
     "source": "WHO 2020 Guidelines on Physical Activity and Sedentary Behaviour",
     "content": "Untuk lansia dengan mobilitas terbatas atau risiko jatuh, latihan multicomponent yang menekankan keseimbangan fungsional (functional balance training) sebaiknya diprioritaskan sebelum menambah beban resistensi yang berat, guna mengurangi risiko cedera sekaligus membangun fondasi stabilitas."
   },
   {
     "id": "kb_nutrition_protein_01",
-    "tags": ["nutrition"],
+    "tags": [
+      "nutrition"
+    ],
     "source": "PROT-AGE Study Group (Bauer J, et al., J Am Med Dir Assoc 2013)",
     "content": "Lansia sehat disarankan mengonsumsi protein rata-rata 1.0-1.2 gram per kilogram berat badan per hari untuk menjaga massa otot, dan lebih tinggi lagi (>=1.2 g/kg) bila aktif berolahraga. Distribusi asupan protein merata di setiap waktu makan (sekitar 25-30 gram per porsi) membantu memaksimalkan sintesis protein otot dibanding menumpuknya di satu waktu makan saja."
   },
   {
     "id": "kb_risk_low_01",
-    "tags": ["risk_low"],
+    "tags": [
+      "risk_low"
+    ],
     "source": "Framing internal berdasarkan struktur AWGS 2019",
     "content": "Kategori risiko rendah berarti indikator yang diukur — massa otot, kekuatan, dan performa fisik — semuanya berada dalam rentang normal untuk usia dan jenis kelamin. Fokus yang tepat pada tahap ini adalah pencegahan: mempertahankan aktivitas fisik teratur dan asupan protein cukup, bukan koreksi masalah yang sudah ada."
   },
   {
     "id": "kb_risk_mid_01",
-    "tags": ["risk_mid"],
+    "tags": [
+      "risk_mid"
+    ],
     "source": "Framing internal, setara \"possible sarcopenia\" pada AWGS 2019",
     "content": "Kategori risiko sedang berarti satu domain (massa otot ATAU salah satu tes fungsi) berada di luar rentang normal. Ini setara dengan tahap 'possible sarcopenia' dalam alur AWGS 2019 — sinyal untuk mulai intervensi proaktif (latihan resistensi, evaluasi asupan protein) dan memantau perubahan dari waktu ke waktu, bukan alasan untuk panik."
   },
   {
     "id": "kb_risk_high_severe_01",
-    "tags": ["risk_high", "risk_severe"],
+    "tags": [
+      "risk_high",
+      "risk_severe"
+    ],
     "source": "Framing internal, setara \"probable/confirmed sarcopenia\" pada AWGS 2019",
     "content": "Kategori risiko tinggi atau berat berarti massa otot rendah disertai penurunan kekuatan dan/atau performa fisik — kombinasi yang pada AWGS 2019 setara dengan sarcopenia yang probable hingga terkonfirmasi. Pada tahap ini, rekomendasi yang tepat adalah evaluasi langsung oleh dokter atau fisioterapis untuk konfirmasi diagnostik (idealnya dengan pengukuran DXA/BIA dan handgrip strength), bukan hanya mengandalkan program latihan mandiri."
   }

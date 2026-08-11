@@ -31,7 +31,16 @@ struct ScreeningFlowView: View {
     @State private var assessment = AssessmentData()
     @State private var ruleResult: AssessmentResult?
     @State private var analysisText: String?
+    @State private var plan: [WorkoutItem] = []
     @State private var isGenerating = false
+
+    // The exercise test runs the three exercises in order.
+    @State private var testIndex = 0
+    private static let testOrder: [(mode: ExerciseMode, name: String)] = [
+        (.sitToStand, "Berdiri dari kursi"),
+        (.stepUp,     "Naik step"),
+        (.calfRaise,  "Jinjit (angkat tumit)"),
+    ]
 
     var body: some View {
         switch step {
@@ -41,16 +50,7 @@ struct ScreeningFlowView: View {
             }
 
         case .exerciseTest:
-            // A live sit-to-stand test (AWGS chair-stand analog). Skippable if the
-            // person can't do it — that's recorded as "unable" rather than 0 reps.
-            ExerciseView(
-                fixedMode: .sitToStand,
-                allowSkip: true,
-                headline: "Tes: berdiri dari kursi (10 detik)"
-            ) { reps in
-                applyExerciseTest(reps)
-                runAnalysis()
-            }
+            exerciseTestStep
 
         case .analysis:
             if let ruleResult {
@@ -64,17 +64,33 @@ struct ScreeningFlowView: View {
         }
     }
 
-    // MARK: Map the exercise test onto the rule engine's physical-test inputs
+    // MARK: The 3-exercise test
 
-    private func applyExerciseTest(_ reps: Int?) {
-        if let reps, reps > 0 {
-            assessment.physicalTest.mobilityStatus = .normal
-            // Reps in the 10 s window → equivalent 5-rep chair-stand time
-            // (AWGS abnormal ≥ 12 s, i.e. < 5 reps in 10 s).
-            assessment.physicalTest.chairStandTestSeconds = 50.0 / Double(reps)
+    @ViewBuilder
+    private var exerciseTestStep: some View {
+        let item = Self.testOrder[testIndex]
+        // Each exercise is skippable ("can't do it" → nil reps). `.id` gives each
+        // a fresh camera + rep counter so switching exercises starts clean.
+        ExerciseView(
+            fixedMode: item.mode,
+            allowSkip: true,
+            headline: "Tes \(testIndex + 1)/3: \(item.name)"
+        ) { reps in
+            recordTest(item.mode, reps)
+        }
+        .id(item.mode)
+    }
+
+    private func recordTest(_ mode: ExerciseMode, _ reps: Int?) {
+        switch mode {
+        case .sitToStand: assessment.physicalTest.sitToStandReps = reps
+        case .stepUp:     assessment.physicalTest.stepUpReps = reps
+        case .calfRaise:  assessment.physicalTest.calfRaiseReps = reps
+        }
+        if testIndex + 1 < Self.testOrder.count {
+            testIndex += 1
         } else {
-            // Skipped / couldn't do it → not assessable via self-test.
-            assessment.physicalTest.mobilityStatus = .unable
+            runAnalysis()
         }
     }
 
@@ -107,8 +123,16 @@ struct ScreeningFlowView: View {
                 result: result,
                 maxChunks: 3
             )
-            let text = await llm.sendMessage(prompt)
-            analysisText = text
+            let raw = await llm.sendMessage(prompt) ?? ""
+            if let parsed = OnDeviceRAG.parse(raw) {
+                analysisText = parsed.analysis
+                plan = parsed.plan
+            } else {
+                // Model didn't return usable JSON → show whatever text came back
+                // (if any) and fall back to the deterministic plan.
+                analysisText = raw.isEmpty ? nil : raw
+                plan = ExercisePlan.derive(from: result)
+            }
             isGenerating = false
         }
     }
@@ -120,7 +144,7 @@ struct ScreeningFlowView: View {
             overallRisk: ruleResult.overallRisk.rawValue,
             workoutRestriction: ruleResult.workoutRestriction.rawValue,
             analysis: analysisText ?? "",
-            plan: ExercisePlan.derive(from: ruleResult)
+            plan: plan.isEmpty ? ExercisePlan.derive(from: ruleResult) : plan
         )
         onFinished(record)
     }

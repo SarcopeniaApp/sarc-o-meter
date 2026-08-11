@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		8C2E69FF30298FD700DE0C85 /* Pods_sarc_o_meter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */; };
 		8C2E6A0030298FD700DE0C85 /* Pods_sarc_o_meter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		8C2E6B093029F43100DE0C85 /* qwen3.5-2b in Resources */ = {isa = PBXBuildFile; fileRef = 8C2E6B083029F43100DE0C85 /* qwen3.5-2b */; };
 		8C348563302A37D3009AEC7A /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348562302A37D3009AEC7A /* MLXLLM */; };
 		8C348565302A37D3009AEC7A /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348564302A37D3009AEC7A /* MLXLMCommon */; };
 		8C348567302A3CAC009AEC7A /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 8C348566302A3CAC009AEC7A /* MLXHuggingFace */; };
@@ -35,7 +34,6 @@
 /* Begin PBXFileReference section */
 		386311E02811F8806773A432 /* Pods_sarc_o_meter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_sarc_o_meter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F5A977FFF0CCE1E429594F6 /* Pods-sarc-o-meter.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-sarc-o-meter.release.xcconfig"; path = "Target Support Files/Pods-sarc-o-meter/Pods-sarc-o-meter.release.xcconfig"; sourceTree = "<group>"; };
-		8C2E6B083029F43100DE0C85 /* qwen3.5-2b */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "qwen3.5-2b"; sourceTree = "<group>"; };
 		8C799EE530245DFB00EC7C56 /* sarc-o-meter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "sarc-o-meter.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F7E3594694AD1C573D28CA53 /* Pods-sarc-o-meter.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-sarc-o-meter.debug.xcconfig"; path = "Target Support Files/Pods-sarc-o-meter/Pods-sarc-o-meter.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -82,7 +80,6 @@
 				8C799EE630245DFB00EC7C56 /* Products */,
 				860D9F8C18C5E319A42F8024 /* Pods */,
 				9D9F187C05256ED309A57415 /* Frameworks */,
-				8C2E6B083029F43100DE0C85 /* qwen3.5-2b */,
 			);
 			sourceTree = "<group>";
 		};
@@ -171,7 +168,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8C2E6B093029F43100DE0C85 /* qwen3.5-2b in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

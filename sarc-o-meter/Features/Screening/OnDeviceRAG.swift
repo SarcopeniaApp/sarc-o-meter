@@ -66,19 +66,22 @@ enum OnDeviceRAG {
     // MARK: Prompt (grounded — mirrors backend/rag/prompt_builder.py)
 
     private static let systemPrompt = """
-    Jelaskan hasil skrining sarkopenia kepada pengguna dalam Bahasa Indonesia yang hangat dan sederhana. \
-    Kategori risiko dan status sudah dihitung — kamu hanya menjelaskannya, jangan mengubahnya. \
-    Dasarkan penjelasan & saran HANYA pada "Referensi"; jangan mengarang angka atau klaim. \
-    Jika ada "Tanda keselamatan" pada hasil, prioritaskan itu: tekankan perlunya evaluasi \
-    profesional dan batasi saran latihan ke gerakan ringan. Hindari kata "diagnosis". \
-    Ini alat skrining, bukan pengganti dokter.
+    Kamu asisten yang menjelaskan hasil skrining sarkopenia dalam Bahasa Indonesia yang hangat \
+    dan sederhana, lalu menyusun rencana latihan konkret. Kategori risiko dan status SUDAH \
+    dihitung — jangan mengubahnya, hanya jelaskan. Dasarkan HANYA pada hasil + "Referensi"; \
+    jangan mengarang. Jika ada "Tanda keselamatan", tekankan evaluasi profesional dan buat \
+    rencana lebih ringan. Latihan HANYA boleh: "Sit to Stand", "Step Up", "Calf Raise". \
+    Hindari kata "diagnosis".
+
+    Balas HANYA dengan JSON valid (tanpa markdown), format persis:
+    {"analysis":"<1-2 kalimat penjelasan + motivasi>","plan":[{"exercise":"Sit to Stand","intensity":0.7,"repsPerSet":10,"setsPerDay":2}]}
+    intensity 0.0–1.0 (lebih rendah untuk risiko/keterbatasan lebih tinggi). Sertakan ketiga latihan kecuali dibatasi keselamatan.
     """
 
-    /// Builds the grounded prompt. Crucially it includes a summary of the user's
-    /// actual `AssessmentResult` (risk, per-indicator status, and red/other flags)
-    /// so the analysis reflects THIS person — e.g. a skipped exercise test shows up
-    /// as an "unable to self-test" red flag and steers the answer toward
-    /// professional evaluation. Mirrors backend/rag/prompt_builder.py.
+    /// Builds the grounded prompt: the user's real result summary, the deterministic
+    /// baseline plan (the model refines it, and it's the parse fallback), and the
+    /// retrieved references. A skipped exercise → an "unable to self-test" red flag
+    /// here, which steers the analysis + gentles the plan.
     static func buildPrompt(question: String, result: AssessmentResult, maxChunks: Int = 3) -> String {
         let tags = relevantTags(for: result)
         let retrieved = retrieve(tags: tags, limit: maxChunks)
@@ -88,15 +91,54 @@ enum OnDeviceRAG {
             .map { "[\($0.source)]\n\($0.content)" }
             .joined(separator: "\n\n")
 
+        let baseline = ExercisePlan.derive(from: result)
+            .map { "\($0.exercise): intensity \($0.intensity), \($0.repsPerSet) rep, \($0.setsPerDay)x/hari" }
+            .joined(separator: "\n")
+
         return """
         Hasil skrining pengguna (sudah final — jelaskan, jangan ubah):
         \(resultSummary(result))
 
-        Referensi relevan (satu-satunya dasar untuk penjelasan & saran):
+        Rencana latihan awal yang disarankan (silakan sesuaikan sedikit, tetap aman):
+        \(baseline)
+
+        Referensi relevan (dasar untuk penjelasan & saran):
         \(references)
 
-        Pertanyaan pengguna: \(question)
+        \(question)
         """
+    }
+
+    /// Parse the model's JSON reply → (analysis text, structured plan). Returns nil
+    /// when the output isn't valid/usable so the caller can fall back to the
+    /// deterministic plan. Defensive: strips markdown fences, keeps only the known
+    /// exercises, and clamps numbers.
+    static func parse(_ raw: String) -> (analysis: String, plan: [WorkoutItem])? {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let open = s.firstIndex(of: "{"), let close = s.lastIndex(of: "}") {
+            s = String(s[open...close])
+        }
+        guard let data = s.data(using: .utf8),
+              let out = try? JSONDecoder().decode(LLMOutput.self, from: data) else { return nil }
+
+        let allowed: Set<String> = ["Sit to Stand", "Step Up", "Calf Raise"]
+        let plan = out.plan.compactMap { w -> WorkoutItem? in
+            guard allowed.contains(w.exercise) else { return nil }
+            return WorkoutItem(
+                exercise: w.exercise,
+                intensity: min(1, max(0, w.intensity)),
+                repsPerSet: max(1, min(50, w.repsPerSet)),
+                setsPerDay: max(1, min(6, w.setsPerDay))
+            )
+        }
+        guard !plan.isEmpty else { return nil }
+        let analysis = out.analysis.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (analysis.isEmpty ? "—" : analysis, plan)
+    }
+
+    private struct LLMOutput: Decodable {
+        let analysis: String
+        let plan: [WorkoutItem]
     }
 
     /// Human-readable Indonesian summary of the rule-engine result for the prompt.

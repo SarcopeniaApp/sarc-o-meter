@@ -14,8 +14,8 @@ struct TrackerView: View {
     let record: ScreeningRecord
     var onRestartScreening: () -> Void
 
-    @State private var active: ExercisePrescription?          // exercise being run
-    @State private var doneReps: [String: Int] = [:]          // mode → reps logged today
+    @State private var active: WorkoutItem?                   // exercise being run
+    @State private var doneReps: [String: Int] = [:]          // exercise → reps logged today
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,13 +39,13 @@ struct TrackerView: View {
                 .padding(.vertical, 12)
         }
         .background(Theme.bg.ignoresSafeArea())
-        .fullScreenCover(item: $active) { presc in
+        .fullScreenCover(item: $active) { item in
             ExerciseView(
-                fixedMode: ExerciseMode(rawValue: presc.mode) ?? .sitToStand,
-                intensity: presc.intensity,
-                headline: "\(displayName(presc.mode)) · intensitas \(Int(presc.intensity * 100))%"
+                fixedMode: ExerciseMode(rawValue: item.exercise) ?? .sitToStand,
+                intensity: item.intensity,
+                headline: "\(displayName(item.exercise)) · intensitas \(Int(item.intensity * 100))%"
             ) { reps in
-                if let reps { doneReps[presc.mode, default: 0] += reps }
+                if let reps { doneReps[item.exercise, default: 0] += reps }
                 active = nil
             }
         }
@@ -80,27 +80,28 @@ struct TrackerView: View {
 
     // MARK: Prescription card
 
-    private func prescriptionCard(_ presc: ExercisePrescription) -> some View {
-        let done = doneReps[presc.mode] ?? 0
-        let reached = done >= presc.targetReps
+    private func prescriptionCard(_ item: WorkoutItem) -> some View {
+        let dailyTarget = item.repsPerSet * item.setsPerDay
+        let done = doneReps[item.exercise] ?? 0
+        let reached = done >= dailyTarget
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: reached ? "checkmark.circle.fill" : icon(presc.mode))
+                Image(systemName: reached ? "checkmark.circle.fill" : icon(item.exercise))
                     .font(.system(size: 24))
                     .foregroundStyle(reached ? .green : Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName(presc.mode))
+                    Text(displayName(item.exercise))
                         .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
-                    Text("Target \(presc.targetReps) rep · intensitas \(Int(presc.intensity * 100))%")
+                    Text("\(item.repsPerSet) rep × \(item.setsPerDay)/hari · intensitas \(Int(item.intensity * 100))%")
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 }
                 Spacer()
-                Text("\(done)/\(presc.targetReps)")
+                Text("\(done)/\(dailyTarget)")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(reached ? .green : Theme.accent)
             }
 
-            Button { active = presc } label: {
+            Button { active = item } label: {
                 Text(done > 0 ? "Lanjutkan" : "Mulai")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
