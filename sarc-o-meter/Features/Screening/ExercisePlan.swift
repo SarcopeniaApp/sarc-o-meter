@@ -9,15 +9,10 @@ import Foundation
 
 enum ExercisePlan {
 
-    // ExerciseMode raw values, as strings (independent of the Exercise feature).
-    private static let calfRaise = "Calf Raise"
-    private static let stepUp = "Step Up"
-    private static let sitToStand = "Sit to Stand"
-
-    static func derive(from result: AssessmentResult) -> [WorkoutItem] {
+    static func derive(from result: AssessmentResult) -> [Workout] {
         // Safety first: mobility/balance-only clearance → one gentle, low-ROM move.
         if result.workoutRestriction == .mobilityOnly {
-            return [WorkoutItem(exercise: calfRaise, intensity: 0.4, repsPerSet: 8, setsPerDay: 1)]
+            return [Workout(kind: .calfRaise, intensity: 0.4, repsPerSet: 8, setsPerDay: 1)]
         }
 
         // Scale ROM (intensity), reps, and daily dose to the risk category.
@@ -41,9 +36,9 @@ enum ExercisePlan {
         }
 
         return [
-            WorkoutItem(exercise: calfRaise,  intensity: intensity, repsPerSet: reps, setsPerDay: sets),
-            WorkoutItem(exercise: stepUp,     intensity: intensity, repsPerSet: reps, setsPerDay: sets),
-            WorkoutItem(exercise: sitToStand, intensity: intensity, repsPerSet: reps, setsPerDay: sets),
+            Workout(kind: .calfRaise,  intensity: intensity, repsPerSet: reps, setsPerDay: sets),
+            Workout(kind: .stepUp,     intensity: intensity, repsPerSet: reps, setsPerDay: sets),
+            Workout(kind: .sitToStand, intensity: intensity, repsPerSet: reps, setsPerDay: sets),
         ]
     }
 }

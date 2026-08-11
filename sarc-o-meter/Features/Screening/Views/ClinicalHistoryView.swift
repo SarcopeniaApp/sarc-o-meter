@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct ClinicalHistoryView: View {
-    @Binding var history: ClinicalHistory
+    @Bindable var user: User
     var onBack: (() -> Void)? = nil
     let onNext: () -> Void
 
@@ -24,15 +24,15 @@ struct ClinicalHistoryView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     toggleRow("Operasi atau rawat inap baru-baru ini", "Dalam 3 bulan terakhir",
-                              $history.hasRecentSurgeryOrHospitalization)
+                              $user.hasRecentSurgeryOrHospitalization)
                     toggleRow("Kondisi jantung tidak stabil", "mis. nyeri dada, tekanan darah tidak terkontrol",
-                              $history.hasUnstableCardio)
+                              $user.hasUnstableCardio)
                     toggleRow("Sering terjatuh", "Dalam 12 bulan terakhir",
-                              $history.hasRecentFalls)
+                              $user.hasRecentFalls)
                     toggleRow("Nyeri sendi akut atau patah tulang belum sembuh", nil,
-                              $history.hasAcuteJointPainOrFracture)
+                              $user.hasAcuteJointPainOrFracture)
                     toggleRow("Kondisi yang memengaruhi keseimbangan", "mis. stroke, Parkinson",
-                              $history.hasNeurologicalCondition)
+                              $user.hasNeurologicalCondition)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)

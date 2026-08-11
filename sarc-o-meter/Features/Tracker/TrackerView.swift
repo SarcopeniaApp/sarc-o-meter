@@ -14,8 +14,8 @@ struct TrackerView: View {
     let record: ScreeningRecord
     var onRestartScreening: () -> Void
 
-    @State private var active: WorkoutItem?                   // exercise being run
-    @State private var doneReps: [String: Int] = [:]          // exercise → reps logged today
+    @State private var active: Workout?                       // exercise being run
+    @State private var doneReps: [WorkoutKind: Int] = [:]     // exercise → reps logged today
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,11 +41,11 @@ struct TrackerView: View {
         .background(Theme.bg.ignoresSafeArea())
         .fullScreenCover(item: $active) { item in
             ExerciseView(
-                fixedMode: ExerciseMode(rawValue: item.exercise) ?? .sitToStand,
+                fixedMode: ExerciseMode(rawValue: item.kind.rawValue) ?? .sitToStand,
                 intensity: item.intensity,
-                headline: "\(displayName(item.exercise)) · intensitas \(Int(item.intensity * 100))%"
+                headline: "\(displayName(item.kind)) · intensitas \(Int(item.intensity * 100))%"
             ) { reps in
-                if let reps { doneReps[item.exercise, default: 0] += reps }
+                if let reps { doneReps[item.kind, default: 0] += reps }
                 active = nil
             }
         }
@@ -80,17 +80,17 @@ struct TrackerView: View {
 
     // MARK: Prescription card
 
-    private func prescriptionCard(_ item: WorkoutItem) -> some View {
+    private func prescriptionCard(_ item: Workout) -> some View {
         let dailyTarget = item.repsPerSet * item.setsPerDay
-        let done = doneReps[item.exercise] ?? 0
+        let done = doneReps[item.kind] ?? 0
         let reached = done >= dailyTarget
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: reached ? "checkmark.circle.fill" : icon(item.exercise))
+                Image(systemName: reached ? "checkmark.circle.fill" : icon(item.kind))
                     .font(.system(size: 24))
                     .foregroundStyle(reached ? .green : Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName(item.exercise))
+                    Text(displayName(item.kind))
                         .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
                     Text("\(item.repsPerSet) rep × \(item.setsPerDay)/hari · intensitas \(Int(item.intensity * 100))%")
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
@@ -114,23 +114,21 @@ struct TrackerView: View {
         .shadow(color: Theme.cardShadow, radius: 8, y: 4)
     }
 
-    // MARK: Display helpers (ExerciseMode raw value → Indonesian)
+    // MARK: Display helpers (WorkoutKind → Indonesian)
 
-    private func displayName(_ mode: String) -> String {
-        switch mode {
-        case "Sit to Stand": return "Berdiri dari kursi"
-        case "Step Up":      return "Naik step"
-        case "Calf Raise":   return "Jinjit (angkat tumit)"
-        default:             return mode
+    private func displayName(_ kind: WorkoutKind) -> String {
+        switch kind {
+        case .sitToStand: return "Berdiri dari kursi"
+        case .stepUp:     return "Naik step"
+        case .calfRaise:  return "Jinjit (angkat tumit)"
         }
     }
 
-    private func icon(_ mode: String) -> String {
-        switch mode {
-        case "Sit to Stand": return "figure.seated.side"
-        case "Step Up":      return "figure.stairs"
-        case "Calf Raise":   return "figure.walk"
-        default:             return "figure.strengthtraining.functional"
+    private func icon(_ kind: WorkoutKind) -> String {
+        switch kind {
+        case .sitToStand: return "figure.seated.side"
+        case .stepUp:     return "figure.stairs"
+        case .calfRaise:  return "figure.walk"
         }
     }
 }

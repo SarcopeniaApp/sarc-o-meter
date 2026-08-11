@@ -35,7 +35,8 @@ import CoreGraphics
 
 // MARK: - Errors
 //
-// The result type `BodyMeasurements` lives in State/BodyMeasurements.swift.
+// `predict` returns the raw model output as a `[name: cm]` dictionary; the caller
+// folds the values it needs into the central `User`.
 
 enum BMNetError: Error {
     case modelNotFound
@@ -47,6 +48,14 @@ enum BMNetError: Error {
 // MARK: - Predictor
 
 final class BMNetPredictor {
+
+    /// The 14 measurements the model predicts, in the model's fixed output order
+    /// (in centimeters). Do not reorder — the prediction array is read positionally.
+    static let measurementNames = [
+        "ankle", "arm-length", "bicep", "calf", "chest", "forearm", "height",
+        "hip", "leg-length", "shoulder-breadth", "shoulder-to-crotch", "thigh",
+        "waist", "wrist",
+    ]
 
     // Geometry the model was trained on.
     private let viewW = 480          // width of ONE view
@@ -82,7 +91,7 @@ final class BMNetPredictor {
     func predict(front: CGImage, side: CGImage,
                  heightCm: Double, weightKg: Double,
                  orientation: CGImagePropertyOrientation = .up)
-        throws -> (measurements: BodyMeasurements, warnings: [String]) {
+        throws -> (measurements: [String: Double], warnings: [String]) {
 
         let frontMask = try personMask(from: front, orientation: orientation)
         let sideMask  = try personMask(from: side,  orientation: orientation)
@@ -95,7 +104,7 @@ final class BMNetPredictor {
     /// is treated as body.
     func predict(frontMask: CGImage, sideMask: CGImage,
                  heightCm: Double, weightKg: Double)
-        throws -> (measurements: BodyMeasurements, warnings: [String]) {
+        throws -> (measurements: [String: Double], warnings: [String]) {
 
         var warnings: [String] = []
         if !heightRange.contains(heightCm) {
@@ -112,14 +121,14 @@ final class BMNetPredictor {
         let out = try model.prediction(from: provider)
 
         guard let arr = out.featureValue(for: "measurements")?.multiArrayValue,
-              arr.count >= BodyMeasurements.names.count else {
+              arr.count >= Self.measurementNames.count else {
             throw BMNetError.badOutput
         }
         var values: [String: Double] = [:]
-        for (i, name) in BodyMeasurements.names.enumerated() {
+        for (i, name) in Self.measurementNames.enumerated() {
             values[name] = arr[i].doubleValue
         }
-        return (BodyMeasurements(values: values), warnings)
+        return (values, warnings)
     }
 
     // MARK: Build the 3-channel input tensor

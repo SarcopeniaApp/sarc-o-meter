@@ -2,36 +2,27 @@
 //
 //  ══════════════════════ SCREENING FEATURE — ENTRY POINT ══════════════════════
 //  Runs the second half of the screening: questionnaire → exercise test
-//  (MediaPipe sit-to-stand, skippable) → on-device analysis. On finish it hands a
-//  fully-built ScreeningRecord (result + LLM analysis + adjustable workout plan)
-//  back to the shell, which persists it and moves into the tracker.
+//  (MediaPipe, each exercise skippable) → on-device analysis. It reads the person's
+//  info + measurements straight off the shared `User`, writes the exercise-test
+//  reps back onto it, and on finish stores the completed `ScreeningRecord` into
+//  `user.screening` — the shell then persists `user` and moves into the tracker.
 //
-//  CONTRACT: `ScreeningInput`, and `ScreeningFlowView(input:llm:onExit:onFinished:)`.
+//  CONTRACT: `ScreeningFlowView(user:llm:onExit:onFinished:)`.
 //  ═════════════════════════════════════════════════════════════════════════════
 
 import SwiftUI
 
-/// Everything the screening needs from the rest of the app — Core types only.
-struct ScreeningInput {
-    let gender: Gender
-    let ageYears: Int?
-    let heightCm: Double?
-    let weightKg: Double?
-    let measurements: BodyMeasurements?
-}
-
 struct ScreeningFlowView: View {
-    let input: ScreeningInput
+    let user: User
     let llm: LLMManager
-    var onExit: () -> Void                        // back out to the scan result
-    var onFinished: (ScreeningRecord) -> Void     // shell saves + opens the tracker
+    var onExit: () -> Void            // back out to the scan result
+    var onFinished: () -> Void        // shell persists `user` + opens the tracker
 
     private enum Step { case questionnaire, exerciseTest, analysis }
     @State private var step: Step = .questionnaire
-    @State private var assessment = AssessmentData()
     @State private var ruleResult: AssessmentResult?
     @State private var analysisText: String?
-    @State private var plan: [WorkoutItem] = []
+    @State private var plan: [Workout] = []
     @State private var isGenerating = false
 
     // The exercise test runs the three exercises in order.
@@ -45,7 +36,7 @@ struct ScreeningFlowView: View {
     var body: some View {
         switch step {
         case .questionnaire:
-            ClinicalHistoryView(history: $assessment.clinicalHistory, onBack: onExit) {
+            ClinicalHistoryView(user: user, onBack: onExit) {
                 step = .exerciseTest
             }
 
@@ -83,9 +74,9 @@ struct ScreeningFlowView: View {
 
     private func recordTest(_ mode: ExerciseMode, _ reps: Int?) {
         switch mode {
-        case .sitToStand: assessment.physicalTest.sitToStandReps = reps
-        case .stepUp:     assessment.physicalTest.stepUpReps = reps
-        case .calfRaise:  assessment.physicalTest.calfRaiseReps = reps
+        case .sitToStand: user.sitToStandReps = reps
+        case .stepUp:     user.stepUpReps = reps
+        case .calfRaise:  user.calfRaiseReps = reps
         }
         if testIndex + 1 < Self.testOrder.count {
             testIndex += 1
@@ -97,19 +88,9 @@ struct ScreeningFlowView: View {
     // MARK: Rule engine + on-device RAG analysis
 
     private func runAnalysis() {
-        assessment.personalData = PersonalData(
-            age: input.ageYears,
-            gender: input.gender,
-            heightCm: input.heightCm,
-            weightKg: input.weightKg
-        )
-        assessment.bodyMeasurement = BodyMeasurement(
-            waistCircumferenceCm: input.measurements?["waist"],
-            calfCircumferenceCm: input.measurements?["calf"],
-            armCircumferenceCm: input.measurements?["bicep"]
-        )
-
-        let result = RuleEngine.evaluate(data: assessment)
+        // Everything the rule engine needs (gender, height, calf, waist, clinical
+        // history, the reps just recorded) already lives on `user`.
+        let result = RuleEngine.evaluate(user)
         ruleResult = result
         analysisText = nil
         isGenerating = true
@@ -139,13 +120,13 @@ struct ScreeningFlowView: View {
 
     private func finish() {
         guard let ruleResult else { return }
-        let record = ScreeningRecord(
+        user.screening = ScreeningRecord(
             completedAt: Date(),
             overallRisk: ruleResult.overallRisk.rawValue,
             workoutRestriction: ruleResult.workoutRestriction.rawValue,
             analysis: analysisText ?? "",
             plan: plan.isEmpty ? ExercisePlan.derive(from: ruleResult) : plan
         )
-        onFinished(record)
+        onFinished()
     }
 }

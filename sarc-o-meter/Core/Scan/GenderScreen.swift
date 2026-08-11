@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct GenderScreen: View {
-    @Binding var selection: Gender?
+    let user: User
     @Binding var debugServer: String
     let onNext: () -> Void
 
@@ -57,9 +57,9 @@ struct GenderScreen: View {
     // Tapping selects AND advances — the whole row is the control. The gender
     // glyphs are the Unicode ♀/♂ characters (SF Symbols has no `mars`/`venus`),
     // so they render reliably on any device.
-    private func genderRow(_ g: Gender, glyph: String, label: String) -> some View {
+    private func genderRow(_ g: UserGender, glyph: String, label: String) -> some View {
         Button {
-            selection = g
+            user.gender = g
             onNext()
         } label: {
             HStack(spacing: 16) {

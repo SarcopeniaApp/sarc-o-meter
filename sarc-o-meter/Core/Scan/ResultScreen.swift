@@ -2,14 +2,13 @@
 //
 //  The scan payoff: a white card with a body glyph, a derived body-type label,
 //  and the headline measurements (calf highlighted — it's what this app cares
-//  about), plus Rescan / Finish. It reads whatever the model produced via the
-//  BodyMeasurements subscript, so missing values degrade to a dash rather than 0.
+//  about), plus Rescan / Finish. It reads the measurements the scan folded into
+//  `user`, so any that are missing degrade to a dash rather than 0.
 
 import SwiftUI
 
 struct ResultScreen: View {
-    let measurements: BodyMeasurements
-    let gender: Gender?
+    let user: User
     let onRescan: () -> Void
     let onFinish: () -> Void
 
@@ -60,11 +59,11 @@ struct ResultScreen: View {
             }
 
             VStack(alignment: .leading, spacing: 18) {
-                measRow("Tinggi",   measurements["height"])
-                measRow("Dada",     measurements["chest"])
-                measRow("Pinggang", measurements["waist"])
-                measRow("Pinggul",  measurements["hip"])
-                measRow("Betis",    measurements["calf"], highlight: true)
+                measRow("Tinggi",   user.height)
+                measRow("Dada",     user.chest)
+                measRow("Pinggang", user.waist)
+                measRow("Pinggul",  user.hip)
+                measRow("Betis",    user.calf, highlight: true)
             }
 
             Spacer(minLength: 0)
@@ -102,6 +101,6 @@ struct ResultScreen: View {
 
     // Gender-specific classification per BODY_SHAPE_RULE.md.
     private var bodyType: String {
-        BodyShape.classify(gender: gender, measurements: measurements)
+        BodyShape.classify(user: user)
     }
 }

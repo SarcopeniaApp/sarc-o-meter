@@ -92,7 +92,7 @@ enum OnDeviceRAG {
             .joined(separator: "\n\n")
 
         let baseline = ExercisePlan.derive(from: result)
-            .map { "\($0.exercise): intensity \($0.intensity), \($0.repsPerSet) rep, \($0.setsPerDay)x/hari" }
+            .map { "\($0.kind.rawValue): intensity \($0.intensity), \($0.repsPerSet) rep, \($0.setsPerDay)x/hari" }
             .joined(separator: "\n")
 
         return """
@@ -113,7 +113,7 @@ enum OnDeviceRAG {
     /// when the output isn't valid/usable so the caller can fall back to the
     /// deterministic plan. Defensive: strips markdown fences, keeps only the known
     /// exercises, and clamps numbers.
-    static func parse(_ raw: String) -> (analysis: String, plan: [WorkoutItem])? {
+    static func parse(_ raw: String) -> (analysis: String, plan: [Workout])? {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let open = s.firstIndex(of: "{"), let close = s.lastIndex(of: "}") {
             s = String(s[open...close])
@@ -121,11 +121,12 @@ enum OnDeviceRAG {
         guard let data = s.data(using: .utf8),
               let out = try? JSONDecoder().decode(LLMOutput.self, from: data) else { return nil }
 
-        let allowed: Set<String> = ["Sit to Stand", "Step Up", "Calf Raise"]
-        let plan = out.plan.compactMap { w -> WorkoutItem? in
-            guard allowed.contains(w.exercise) else { return nil }
-            return WorkoutItem(
-                exercise: w.exercise,
+        // Keep only the known exercises (WorkoutKind validates the LLM's string)
+        // and clamp the numbers.
+        let plan = out.plan.compactMap { w -> Workout? in
+            guard let kind = WorkoutKind(rawValue: w.exercise) else { return nil }
+            return Workout(
+                kind: kind,
                 intensity: min(1, max(0, w.intensity)),
                 repsPerSet: max(1, min(50, w.repsPerSet)),
                 setsPerDay: max(1, min(6, w.setsPerDay))
@@ -136,9 +137,17 @@ enum OnDeviceRAG {
         return (analysis.isEmpty ? "—" : analysis, plan)
     }
 
+    // The model emits `{"exercise":"Sit to Stand", …}`; decode that shape, then
+    // map it onto the Core `Workout` (whose kind is a WorkoutKind, not a string).
     private struct LLMOutput: Decodable {
         let analysis: String
-        let plan: [WorkoutItem]
+        let plan: [LLMWorkout]
+    }
+    private struct LLMWorkout: Decodable {
+        let exercise: String
+        let intensity: Double
+        let repsPerSet: Int
+        let setsPerDay: Int
     }
 
     /// Human-readable Indonesian summary of the rule-engine result for the prompt.

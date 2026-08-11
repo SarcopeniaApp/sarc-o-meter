@@ -11,7 +11,7 @@
 import SwiftUI
 
 struct ScanIntroView: View {
-    let gender: Gender?
+    let user: User
     var onBack: (() -> Void)? = nil
     let onBeginScan: () -> Void
     let onManual: () -> Void
@@ -50,7 +50,7 @@ struct ScanIntroView: View {
     }
 
     private var frontSymbol: String {
-        gender == .female ? "figure.stand.dress" : "figure.stand"
+        user.gender == .female ? "figure.stand.dress" : "figure.stand"
     }
 
     private func figureCard(symbol: String, label: String) -> some View {

@@ -15,12 +15,12 @@ import Foundation
 
 enum BodyShape {
 
-    static func classify(gender: Gender?, measurements m: BodyMeasurements) -> String {
-        guard let chest = m["chest"], let waist = m["waist"], let hips = m["hip"],
+    static func classify(user: User) -> String {
+        guard let chest = user.chest, let waist = user.waist, let hips = user.hip,
               chest > 0, waist > 0, hips > 0 else { return "—" }
-        let shoulders = m["shoulder-breadth"] ?? 0
+        let shoulders = user.shoulderBreadth ?? 0
 
-        switch gender {
+        switch user.gender {
         case .female:
             let upper = max(shoulders, chest)          // upper_torso
             // Oval (Apple): waist is the widest of the three.

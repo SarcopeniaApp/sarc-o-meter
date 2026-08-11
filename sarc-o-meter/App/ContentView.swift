@@ -1,11 +1,12 @@
 //  ContentView.swift
 //
-//  The app shell + launch router.
-//   • If a screening has already been completed (ScreeningStore has a record) →
-//     go straight to the Tracker.
+//  The app shell + launch router. It owns the one shared `User` (loaded from
+//  UserStore) and every screen reads/writes it directly.
+//   • If screening is already done (`user.screening` is set) → straight to the
+//     Tracker.
 //   • Otherwise run the screening: gender → age → height → weight → body scan
 //     (auto or manual) → result → questionnaire → exercise test → analysis, then
-//     save the record and drop into the Tracker.
+//     save `user` and drop into the Tracker.
 //
 //  It owns only the CORE journey (personal info + the scan) and hands off to the
 //  feature entry views: ScreeningFlowView and TrackerView.
@@ -19,19 +20,15 @@ struct ContentView: View {
         case gender, age, height, weight, instructions, manual, measuring, result, screening
     }
 
-    // Loaded once on first creation. Non-nil ⇒ screening done ⇒ show the tracker.
-    @State private var record: ScreeningRecord? = ScreeningStore.load()
+    // The single source of truth. Loaded once; a saved user whose screening is
+    // filled in means "returning user → show the tracker".
+    @State private var user: User = UserStore.load() ?? User()
 
     @State private var step: Step = .gender
-    @State private var gender: Gender?
-    @State private var ageYears = 0
-    @State private var heightCm = 0
-    @State private var weightKg = 0
-    @State private var measurements: BodyMeasurements?
     @State private var errorText: String?
     @State private var showCapture = false
 
-    // Manual-entry sub-flow state.
+    // Manual-entry sub-flow state (a transient input buffer; committed into `user`).
     @State private var manualIndex = 0
     @State private var manualEntry = 0
     @State private var manualValues: [String: Double] = [:]
@@ -51,7 +48,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-            if let record {
+            if let record = user.screening {
                 // ── Returning user: straight to the tracker ──
                 TrackerView(record: record, onRestartScreening: { restartScreening() })
             } else {
@@ -74,14 +71,14 @@ struct ContentView: View {
         }
         // Preload the on-device model during screening so it's ready by the
         // analysis step. Skipped for returning (tracker) users who don't need it.
-        .task { if record == nil { await llm.loadModel() } }
+        .task { if user.screening == nil { await llm.loadModel() } }
     }
 
     @ViewBuilder
     private var content: some View {
         switch step {
         case .gender:
-            GenderScreen(selection: $gender, debugServer: $debugServer) {
+            GenderScreen(user: user, debugServer: $debugServer) {
                 step = .age
             }
 
@@ -89,27 +86,27 @@ struct ContentView: View {
             NumericPadScreen(
                 title: "Tentang Anda",
                 subtitle: "Berapa usia Anda? Usia membantu kami menyesuaikan skrining.",
-                unit: "tahun", value: $ageYears,
+                unit: "tahun", value: ageBinding,
                 onBack: { step = .gender }
             ) { step = .height }
 
         case .height:
             NumericPadScreen(
                 subtitle: "Berapa tinggi badan Anda?",
-                unit: "cm", value: $heightCm,
+                unit: "cm", value: heightBinding,
                 onBack: { step = .age }
             ) { step = .weight }
 
         case .weight:
             NumericPadScreen(
                 subtitle: "Bagus — sekarang, berapa berat badan Anda?",
-                unit: "kg", value: $weightKg,
+                unit: "kg", value: weightBinding,
                 onBack: { step = .height }
             ) { step = .instructions }
 
         case .instructions:
             ScanIntroView(
-                gender: gender,
+                user: user,
                 onBack: { step = .weight },
                 onBeginScan: { startCapture() },
                 onManual: { beginManual() }
@@ -122,38 +119,35 @@ struct ContentView: View {
             MeasuringView()
 
         case .result:
-            if let measurements {
-                ResultScreen(
-                    measurements: measurements,
-                    gender: gender,
-                    onRescan: { step = .instructions },
-                    onFinish: { step = .screening }
-                )
-            }
+            ResultScreen(
+                user: user,
+                onRescan: { step = .instructions },
+                onFinish: { step = .screening }
+            )
 
         case .screening:
             // ── Screening feature: questionnaire → exercise test → analysis ──
             ScreeningFlowView(
-                input: screeningInput,
+                user: user,
                 llm: llm,
                 onExit: { step = .result },
-                onFinished: { rec in
-                    ScreeningStore.save(rec)
-                    record = rec            // flips the shell over to the tracker
-                }
+                onFinished: { UserStore.save(user) }   // user.screening is set → tracker
             )
         }
     }
 
-    /// The Core → Screening hand-off, in Core types only.
-    private var screeningInput: ScreeningInput {
-        ScreeningInput(
-            gender: gender ?? .male,
-            ageYears: ageYears > 0 ? ageYears : nil,
-            heightCm: heightCm > 0 ? Double(heightCm) : nil,
-            weightKg: weightKg > 0 ? Double(weightKg) : nil,
-            measurements: measurements
-        )
+    // MARK: Keypad ↔ User bindings (age is years; height/weight are whole cm/kg)
+
+    private var ageBinding: Binding<Int> {
+        Binding(get: { user.age ?? 0 }, set: { user.age = $0 > 0 ? $0 : nil })
+    }
+    private var heightBinding: Binding<Int> {
+        Binding(get: { user.height.map { Int($0) } ?? 0 },
+                set: { user.height = $0 > 0 ? Double($0) : nil })
+    }
+    private var weightBinding: Binding<Int> {
+        Binding(get: { user.weight.map { Int($0) } ?? 0 },
+                set: { user.weight = $0 > 0 ? Double($0) : nil })
     }
 
     // MARK: Manual entry
@@ -198,9 +192,11 @@ struct ContentView: View {
     }
 
     private func finishManual() {
-        var vals = manualValues
-        vals["height"] = Double(heightCm)
-        measurements = BodyMeasurements(values: vals)
+        user.chest = manualValues["chest"]
+        user.waist = manualValues["waist"]
+        user.hip   = manualValues["hip"]
+        user.calf  = manualValues["calf"]
+        // height/weight are already on `user` from the keypad steps.
         step = .result
     }
 
@@ -215,13 +211,8 @@ struct ContentView: View {
     }
 
     private func restartScreening() {
-        ScreeningStore.clear()
-        record = nil
-        gender = nil
-        ageYears = 0
-        heightCm = 0
-        weightKg = 0
-        measurements = nil
+        UserStore.clear()
+        user = User()               // fresh source of truth
         manualIndex = 0
         manualEntry = 0
         manualValues = [:]
@@ -234,18 +225,16 @@ struct ContentView: View {
         guard let predictor,
               let front = frontUI.normalizedUp().cgImage,
               let side = sideUI.normalizedUp().cgImage,
-              heightCm > 0, weightKg > 0 else {
+              let h = user.height, let w = user.weight, h > 0, w > 0 else {
             errorText = "Data kurang — silakan masukkan kembali tinggi dan berat badan Anda."
             step = .weight
             return
         }
-        let h = Double(heightCm)
-        let w = Double(weightKg)
 
         let dbg = DebugLog.shared
         dbg.serverBase = debugServer.isEmpty ? nil : debugServer
         dbg.startRun()
-        dbg.text("input", "height=\(h)cm weight=\(w)kg gender=\(gender?.rawValue ?? "?")")
+        dbg.text("input", "height=\(h)cm weight=\(w)kg gender=\(user.gender?.rawValue ?? "?")")
         dbg.image("00_front", frontUI)
         dbg.image("00_side", sideUI)
 
@@ -264,7 +253,7 @@ struct ContentView: View {
                     frontMask: frontMask, sideMask: sideMask, heightCm: h, weightKg: w)
                 let elapsed = Date().timeIntervalSince(start)
 
-                let ordered = BodyMeasurements.names.map {
+                let ordered = BMNetPredictor.measurementNames.map {
                     "\($0)=\(String(format: "%.1f", result[$0] ?? 0))"
                 }
                 dbg.text("04_measurements", ordered.joined(separator: ", "))
@@ -272,7 +261,12 @@ struct ContentView: View {
                 for wmsg in warns { dbg.text("warning", wmsg) }
 
                 DispatchQueue.main.async {
-                    measurements = result
+                    // Fold the measurements the app uses into the shared user.
+                    user.calf = result["calf"]
+                    user.chest = result["chest"]
+                    user.waist = result["waist"]
+                    user.hip = result["hip"]
+                    user.shoulderBreadth = result["shoulder-breadth"]
                     step = .result
                 }
             } catch {

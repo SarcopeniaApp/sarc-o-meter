@@ -11,12 +11,18 @@ import Foundation
 /// One prescribed exercise. `exercise` is an ExerciseMode raw value
 /// ("Sit to Stand" | "Step Up" | "Calf Raise") — a String so this Core type stays
 /// independent of the Exercise feature.
-struct WorkoutItem: Codable, Identifiable, Sendable {
-    var id: String { exercise }
-    let exercise: String
+struct Workout: Codable, Identifiable, Sendable {
+    var id: WorkoutKind { kind }
+    let kind: WorkoutKind
     let intensity: Double   // 0…1, feeds RepCounter.intensity
     let repsPerSet: Int
     let setsPerDay: Int      // "how many times a day"
+}
+
+enum WorkoutKind: String, Codable {
+    case sitToStand = "Sit to Stand"
+    case stepUp = "Step Up"
+    case calfRaise = "Calf Raise"
 }
 
 struct ScreeningRecord: Codable, Sendable {
@@ -24,5 +30,5 @@ struct ScreeningRecord: Codable, Sendable {
     var overallRisk: String          // RiskCategory raw value
     var workoutRestriction: String   // WorkoutRestriction raw value
     var analysis: String             // the saved LLM analysis text
-    var plan: [WorkoutItem]
+    var plan: [Workout]
 }
