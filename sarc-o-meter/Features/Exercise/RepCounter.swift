@@ -128,8 +128,8 @@ private final class RepetitionDetector {
                    minRepInterval: 0.5, calibrationRelax: 0.01)
         }
         static func calfRaise() -> Config {
-            Config(minRange: 0.04,  lowRatioThreshold: 0.30, highRatioThreshold: 0.65,
-                   minRepInterval: 0.4, calibrationRelax: 0.01)
+            Config(minRange: 0.065, lowRatioThreshold: 0.25, highRatioThreshold: 0.65,
+                   minRepInterval: 1.0, calibrationRelax: 0.01)
         }
     }
 
@@ -298,6 +298,13 @@ final class RepCounter: ObservableObject {
     private var repHipAtTop:    [Double] = []
     private var repTrunkAngles: [Double] = []
 
+    /// Informasi status bahwa posisi telah terdeteksi & sedang menahan jeda 2.5s sebelum countdown
+    @Published var isPostureStabilizing: Bool = false
+
+    // ── Auto-Start Posture Detection ─────────────────────────────────────────
+    private var postureDetectedStartTime: TimeInterval?
+    private let autoStartDelaySeconds: TimeInterval = 2.5   // Jeda 2.5s setelah terdeteksi utuh sebelum countdown
+
     // Calf Raise: baseline & hold tracking
     private var heelBaselineY:       Double?
     private var baselineAccumulator: [Double] = []
@@ -409,11 +416,12 @@ final class RepCounter: ObservableObject {
 
     func reset() {
         repCount = 0; isReady = false
+        resetAutoStartTimer()
         debugMetric = 0; debugRange = 0
         lastRepAnalysis = nil
         lastKneeAngle = nil; lastHipAngle = nil
         repKneeAngles.removeAll(); repHipAtTop.removeAll(); repTrunkAngles.removeAll()
-        heelBaselineY = nil; baselineAccumulator.removeAll()
+        heelBaselineY = nil; baselineAccumulator.removeAll(); calfRiseBuffer.removeAll()
         peakNormHeelRise = 0; holdStartTime = nil; peakHoldDuration = 0
         rebuildDetector()
     }
@@ -422,6 +430,12 @@ final class RepCounter: ObservableObject {
 
     func process(_ person: [NormalizedLandmark]) {
         let now = Date().timeIntervalSince1970
+
+        // ── Auto-Start Posture Detection (otomatis mulai jika posisi sesuai) ──
+        if case .idle = session {
+            checkAutoStart(person)
+        }
+
         switch mode {
         case .sitToStand: processSitToStand(person, ts: now)
         case .stepUp:     processStepUp(person, ts: now)
@@ -429,6 +443,107 @@ final class RepCounter: ObservableObject {
         }
         // Sync debug display
         debugRange = detector.debugMax - detector.debugMin
+    }
+
+    // MARK: - Auto Start Logic (PoseClassifier & Full Body Posture Detection)
+
+    private func checkAutoStart(_ p: [NormalizedLandmark]) {
+        let now = Date().timeIntervalSince1970
+
+        // Wajib: Deteksi seluruh tubuh (bahu, pinggul, lutut, dan pergelangan kaki) terdeteksi di kamera terlebih dahulu
+        guard isFullBodyVisible(p) else {
+            resetAutoStartTimer()
+            return
+        }
+
+        let isReadyPosture: Bool
+
+        switch mode {
+        case .sitToStand:
+            // Deteksi posisi duduk: knee angle (60°...125°) dengan tubuh tegak terdeteksi
+            isReadyPosture = isSittingPose(p)
+
+        case .stepUp, .calfRaise:
+            // Deteksi posisi berdiri tampak samping (PoseClassifier logic dari PoseCaptureView + knee extended)
+            isReadyPosture = isSideStandingPose(p)
+        }
+
+        if isReadyPosture {
+            if postureDetectedStartTime == nil {
+                postureDetectedStartTime = now
+                DispatchQueue.main.async { self.isPostureStabilizing = true }
+            } else if let startTime = postureDetectedStartTime, (now - startTime) >= autoStartDelaySeconds {
+                resetAutoStartTimer()
+                startSession()
+            }
+        } else {
+            resetAutoStartTimer()
+        }
+    }
+
+    private func resetAutoStartTimer() {
+        postureDetectedStartTime = nil
+        if isPostureStabilizing {
+            DispatchQueue.main.async { self.isPostureStabilizing = false }
+        }
+    }
+
+    /// Memastikan seluruh tubuh terdeteksi oleh kamera (setidaknya satu sisi tampak utuh dari bahu hingga pergelangan kaki)
+    private func isFullBodyVisible(_ p: [NormalizedLandmark]) -> Bool {
+        guard p.count >= 29 else { return false }
+        let vMin: Float = 0.35
+        let leftFull  = vis(p, 11) >= vMin && vis(p, 23) >= vMin && vis(p, 25) >= vMin && vis(p, 27) >= vMin
+        let rightFull = vis(p, 12) >= vMin && vis(p, 24) >= vMin && vis(p, 26) >= vMin && vis(p, 28) >= vMin
+        return leftFull || rightFull
+    }
+
+    /// Deteksi profil tampak samping menggunakan rasio lebar bahu/pinggul terhadap tinggi torso
+    /// (Sesuai dengan PoseClassifier di PoseCaptureView & PoseCamera)
+    private func isSideStandingPose(_ p: [NormalizedLandmark]) -> Bool {
+        guard p.count >= 29 else { return false }
+        let sh11 = p[11], sh12 = p[12]
+        let hp23 = p[23], hp24 = p[24]
+
+        let shoulderW = abs(Double(sh11.x - sh12.x))
+        let hipW      = abs(Double(hp23.x - hp24.x))
+        let torsoH    = abs(Double((sh11.y + sh12.y) / 2.0 - (hp23.y + hp24.y) / 2.0))
+
+        guard torsoH > 0.05 else { return false }
+
+        // Pada tampak samping, rasio lebar bahu atau pinggul terhadap tinggi torso menyempit (< 0.38)
+        let shoulderRatio = shoulderW / torsoH
+        let hipRatio      = hipW / torsoH
+        let isSideView    = (shoulderRatio < 0.38) || (hipRatio < 0.38)
+
+        // Harus dalam posisi berdiri tegak (knee angle >= 145°)
+        guard let knee = bestKneeAngleLenient(p) else { return false }
+        let isStanding = knee >= 145.0
+
+        return isSideView && isStanding
+    }
+
+    /// Deteksi posisi duduk untuk Sit to Stand (lutut tekuk 60°...125°)
+    private func isSittingPose(_ p: [NormalizedLandmark]) -> Bool {
+        guard let knee = bestKneeAngleLenient(p) else { return false }
+        return (60...125).contains(knee)
+    }
+
+    private func bestKneeAngleLenient(_ p: [NormalizedLandmark]) -> Double? {
+        let l = kneeAngleLenient(p, hip: 23, knee: 25, ankle: 27)
+        let r = kneeAngleLenient(p, hip: 24, knee: 26, ankle: 28)
+        switch (l, r) {
+        case let (lv?, rv?): return min(lv, rv)
+        case let (lv?, nil): return lv
+        case let (nil, rv?): return rv
+        default: return nil
+        }
+    }
+
+    private func kneeAngleLenient(_ p: [NormalizedLandmark], hip: Int, knee: Int, ankle: Int) -> Double? {
+        guard hip < p.count, knee < p.count, ankle < p.count else { return nil }
+        let visLow: Float = 0.20
+        guard vis(p, hip) >= visLow, vis(p, knee) >= visLow, vis(p, ankle) >= visLow else { return nil }
+        return angle(a: p[hip], v: p[knee], c: p[ankle])
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -467,9 +582,12 @@ final class RepCounter: ObservableObject {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
     // MARK: - Calf Raise
     // Metrik: heelDisplacement / shankLength (normalisasi terhadap panjang betis)
     // ─────────────────────────────────────────────────────────────────────────
+
+    private var calfRiseBuffer: [Double] = []
 
     private func processCalfRaise(_ p: [NormalizedLandmark], ts: TimeInterval) {
         // Kalibrasi baseline tumit hanya dilakukan saat running.
@@ -481,7 +599,7 @@ final class RepCounter: ObservableObject {
             isReady = false   // belum siap selama kalibrasi baseline berlangsung
             return
         }
-        guard let normRise = calfNormRise(p) else { return }
+        guard let normRise = smoothedCalfNormRise(p) else { return }
 
         if normRise > peakNormHeelRise { peakNormHeelRise = normRise }
 
@@ -508,7 +626,17 @@ final class RepCounter: ObservableObject {
         if baselineAccumulator.count >= baselineFramesNeeded {
             heelBaselineY = baselineAccumulator.reduce(0, +) / Double(baselineAccumulator.count)
             baselineAccumulator.removeAll()
+            // Reset detector setelah baseline ter-set agar kalibrasi gerakan mulai bersih dari berpijak di lantai
+            detector.reset()
+            calfRiseBuffer.removeAll()
         }
+    }
+
+    private func smoothedCalfNormRise(_ p: [NormalizedLandmark]) -> Double? {
+        guard let rawRise = calfNormRise(p) else { return nil }
+        calfRiseBuffer.append(rawRise)
+        if calfRiseBuffer.count > 4 { calfRiseBuffer.removeFirst() }
+        return calfRiseBuffer.reduce(0, +) / Double(calfRiseBuffer.count)
     }
 
     private func calfNormRise(_ p: [NormalizedLandmark]) -> Double? {
