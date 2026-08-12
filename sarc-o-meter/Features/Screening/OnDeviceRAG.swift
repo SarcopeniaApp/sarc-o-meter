@@ -9,6 +9,9 @@
 //  This is the retrieval + prompt half; the generation half is the local LLM
 //  (LLMManager). Keep it deterministic and auditable — exact tag matching, same
 //  as the server, so every retrieved chunk is traceable to a rule-engine flag.
+//
+//  v2: Detailed exercise prescription output with per-exercise safety thresholds,
+//  tempo, rest, progression tips, and weekly schedule — matching SarcopeniaApp.
 
 import Foundation
 
@@ -66,23 +69,50 @@ enum OnDeviceRAG {
     // MARK: Prompt (grounded — mirrors backend/rag/prompt_builder.py)
 
     private static let systemPrompt = """
-    Kamu asisten yang menjelaskan hasil skrining sarkopenia dalam Bahasa Indonesia yang hangat \
-    dan sederhana, lalu menyusun rencana latihan konkret. Kategori risiko dan status SUDAH \
-    dihitung — jangan mengubahnya, hanya jelaskan. Dasarkan HANYA pada hasil + "Referensi"; \
-    jangan mengarang. Jika ada "Tanda keselamatan", tekankan evaluasi profesional dan buat \
-    rencana lebih ringan. Latihan HANYA boleh: "Sit to Stand", "Step Up", "Calf Raise". \
-    Hindari kata "diagnosis".
+    Kamu adalah asisten exercise physiologist AI yang membuat rencana latihan personal \
+    untuk orang dewasa usia menengah hingga lansia (40+). Tugasmu adalah menganalisis \
+    kondisi pengguna berdasarkan profil mereka dan meresepkan latihan yang aman dan \
+    berbasis bukti.
 
-    Balas HANYA dengan JSON valid (tanpa markdown), format persis:
-    {"analysis":"<1-2 kalimat penjelasan + motivasi>","plan":[{"exercise":"Sit to Stand","intensity":0.7,"repsPerSet":10,"setsPerDay":2}]}
-    intensity 0.0–1.0 (lebih rendah untuk risiko/keterbatasan lebih tinggi). Sertakan ketiga latihan kecuali dibatasi keselamatan.
+    ATURAN KETAT — WAJIB DIPATUHI:
+    1. Kamu HANYA boleh meresepkan dari 3 latihan ini: Sit to Stand, Step Up, dan \
+    Calf Raise. Jangan meresepkan latihan lain.
+    2. Setiap latihan HARUS mencakup safety threshold yang spesifik: jumlah set, \
+    repetisi, tempo gerakan, waktu istirahat, catatan keselamatan, dan tip progresif. \
+    Parameter ini HARUS didasarkan pada "Referensi relevan" yang diberikan.
+    3. Personalisasikan resep latihan berdasarkan usia, jenis kelamin, pengukuran tubuh, \
+    dan riwayat klinis pengguna. Orang usia 40-54 bisa memulai lebih intensif dibanding 75+.
+    4. Jika ada RED FLAG (kontraindikasi) pada data, PRIORITASKAN keselamatan: \
+    kurangi intensitas drastis, tambahkan peringatan supervisi profesional, dan tekankan \
+    pentingnya evaluasi medis dulu sebelum program latihan mandiri.
+    5. JANGAN PERNAH gunakan kata "diagnosis", "Anda menderita", atau "terdiagnosis". \
+    Gunakan istilah seperti "indikator", "estimasi", atau "sinyal awal".
+    6. Selalu sertakan catatan bahwa ini adalah alat bantu, bukan pengganti evaluasi \
+    medis profesional.
+    7. Sertakan tips pernapasan: JANGAN menahan napas saat latihan, bernapas normal.
+    8. Jika ada "Pembatasan latihan: hanya gerakan ringan", HANYA resepkan 1 latihan \
+    ringan (Calf Raise) dengan intensitas sangat rendah. JANGAN resepkan 3 latihan.
+
+    FORMAT OUTPUT — balas HANYA dengan JSON valid, tanpa markdown fence, dengan struktur \
+    persis:
+    {"insight":"1-2 paragraf menjelaskan kondisi pengguna berdasarkan profil dan \
+    indikator yang tersedia (usia, massa otot, obesitas, riwayat klinis), dan apa \
+    artinya untuk program latihan mereka.","exercises":[{"exercise":"Nama latihan \
+    (salah satu dari: Sit to Stand, Step Up, Calf Raise)","sets":angka,"reps":angka,\
+    "tempo":"Deskripsi tempo gerakan","restSeconds":angka,"safetyNotes":"Catatan \
+    keselamatan spesifik","progressionTip":"Cara meningkatkan intensitas bertahap"}],\
+    "weeklySchedule":"Jadwal mingguan"}
+
+    PENTING: Array "exercises" HARUS berisi tepat 3 objek, satu untuk setiap latihan \
+    (Sit to Stand, Step Up, Calf Raise). Setiap latihan harus dipersonalisasi \
+    berdasarkan kondisi pengguna.
     """
 
     /// Builds the grounded prompt: the user's real result summary, the deterministic
     /// baseline plan (the model refines it, and it's the parse fallback), and the
     /// retrieved references. A skipped exercise → an "unable to self-test" red flag
     /// here, which steers the analysis + gentles the plan.
-    static func buildPrompt(question: String, result: AssessmentResult, maxChunks: Int = 3) -> String {
+    static func buildPrompt(question: String, result: AssessmentResult, user: User, maxChunks: Int = 3) -> String {
         let tags = relevantTags(for: result)
         let retrieved = retrieve(tags: tags, limit: maxChunks)
         print("[OnDeviceRAG] tags=\(tags.sorted()) → \(retrieved.count) chunks \(retrieved.map(\.id))")
@@ -92,28 +122,54 @@ enum OnDeviceRAG {
             .joined(separator: "\n\n")
 
         let baseline = ExercisePlan.derive(from: result)
-            .map { "\($0.kind.rawValue): intensity \($0.intensity), \($0.repsPerSet) rep, \($0.setsPerDay)x/hari" }
+            .map { "\($0.kind.rawValue): \($0.setsPerDay) set × \($0.repsPerSet) rep, tempo: \($0.tempo ?? "-"), rest: \($0.restSeconds ?? 30)s" }
             .joined(separator: "\n")
+
+        // Build user profile context (mirrors SarcopeniaApp's prompt_builder.py)
+        var bmi: Double? = nil
+        if let h = user.height, let w = user.weight, h > 0 {
+            let hm = h / 100.0
+            bmi = (w / (hm * hm)).rounded(toPlaces: 1)
+        }
 
         return """
         Hasil skrining pengguna (sudah final — jelaskan, jangan ubah):
         \(resultSummary(result))
 
-        Rencana latihan awal yang disarankan (silakan sesuaikan sedikit, tetap aman):
+        Profil pengguna:
+        - Usia: \(user.age.map(String.init) ?? "tidak diketahui") tahun
+        - Jenis kelamin: \(user.gender?.rawValue ?? "tidak diketahui")
+        - Tinggi: \(user.height.map { "\($0) cm" } ?? "tidak diketahui")
+        - Berat: \(user.weight.map { "\($0) kg" } ?? "tidak diketahui")
+        - BMI: \(bmi.map { "\($0)" } ?? "tidak diketahui")
+        - Lingkar betis: \(user.calf.map { "\($0) cm" } ?? "tidak diketahui")
+        - Lingkar pinggang: \(user.waist.map { "\($0) cm" } ?? "tidak diketahui")
+
+        Riwayat klinis:
+        - Operasi/rawat inap baru: \(user.hasRecentSurgeryOrHospitalization ? "Ya" : "Tidak")
+        - Kardiovaskular tidak stabil: \(user.hasUnstableCardio ? "Ya" : "Tidak")
+        - Riwayat jatuh: \(user.hasRecentFalls ? "Ya" : "Tidak")
+        - Nyeri sendi/patah tulang: \(user.hasAcuteJointPainOrFracture ? "Ya" : "Tidak")
+        - Kondisi neurologis: \(user.hasNeurologicalCondition ? "Ya" : "Tidak")
+
+        Rencana latihan awal yang disarankan (silakan sesuaikan, tetap aman):
         \(baseline)
 
-        Referensi relevan (dasar untuk penjelasan & saran):
+        Referensi relevan (satu-satunya dasar yang boleh kamu pakai untuk meresepkan \
+        latihan dan menentukan safety threshold):
         \(references)
 
-        \(question)
+        Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua \
+        3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan \
+        parameter yang dipersonalisasi untuk pengguna ini.
         """
     }
 
-    /// Parse the model's JSON reply → (analysis text, structured plan). Returns nil
-    /// when the output isn't valid/usable so the caller can fall back to the
+    /// Parse the model's JSON reply → (analysis text, structured plan, weekly schedule).
+    /// Returns nil when the output isn't valid/usable so the caller can fall back to the
     /// deterministic plan. Defensive: strips markdown fences, keeps only the known
     /// exercises, and clamps numbers.
-    static func parse(_ raw: String) -> (analysis: String, plan: [Workout])? {
+    static func parse(_ raw: String) -> (analysis: String, plan: [Workout], weeklySchedule: String?)? {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let open = s.firstIndex(of: "{"), let close = s.lastIndex(of: "}") {
             s = String(s[open...close])
@@ -123,31 +179,40 @@ enum OnDeviceRAG {
 
         // Keep only the known exercises (WorkoutKind validates the LLM's string)
         // and clamp the numbers.
-        let plan = out.plan.compactMap { w -> Workout? in
+        let plan = out.exercises.compactMap { w -> Workout? in
             guard let kind = WorkoutKind(rawValue: w.exercise) else { return nil }
             return Workout(
                 kind: kind,
-                intensity: min(1, max(0, w.intensity)),
-                repsPerSet: max(1, min(50, w.repsPerSet)),
-                setsPerDay: max(1, min(6, w.setsPerDay))
+                intensity: 0.7, // not set by LLM; use a sensible default
+                repsPerSet: max(1, min(50, w.reps)),
+                setsPerDay: max(1, min(6, w.sets)),
+                tempo: w.tempo,
+                restSeconds: w.restSeconds.map { max(10, min(180, $0)) },
+                safetyNotes: w.safetyNotes,
+                progressionTip: w.progressionTip
             )
         }
         guard !plan.isEmpty else { return nil }
-        let analysis = out.analysis.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (analysis.isEmpty ? "—" : analysis, plan)
+        let analysis = out.insight.trimmingCharacters(in: .whitespacesAndNewlines)
+        let schedule = out.weeklySchedule?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (analysis.isEmpty ? "—" : analysis, plan, schedule)
     }
 
     // The model emits `{"exercise":"Sit to Stand", …}`; decode that shape, then
     // map it onto the Core `Workout` (whose kind is a WorkoutKind, not a string).
     private struct LLMOutput: Decodable {
-        let analysis: String
-        let plan: [LLMWorkout]
+        let insight: String
+        let exercises: [LLMExercise]
+        let weeklySchedule: String?
     }
-    private struct LLMWorkout: Decodable {
+    private struct LLMExercise: Decodable {
         let exercise: String
-        let intensity: Double
-        let repsPerSet: Int
-        let setsPerDay: Int
+        let sets: Int
+        let reps: Int
+        let tempo: String?
+        let restSeconds: Int?
+        let safetyNotes: String?
+        let progressionTip: String?
     }
 
     /// Human-readable Indonesian summary of the rule-engine result for the prompt.
@@ -171,9 +236,9 @@ enum OnDeviceRAG {
     private static func riskLabel(_ r: RiskCategory) -> String {
         switch r {
         case .low:        return "Risiko Rendah"
-        case .mid:        return "Risiko Menengah (kemungkinan sarkopenia)"
-        case .high:       return "Risiko Tinggi (sarkopenia terkonfirmasi)"
-        case .severe:     return "Risiko Berat (sarkopenia + performa rendah)"
+        case .mid:        return "Risiko Menengah"
+        case .high:       return "Risiko Tinggi"
+        case .severe:     return "Risiko Berat"
         case .unassessed: return "Belum dinilai (data kurang)"
         }
     }
@@ -188,3 +253,13 @@ enum OnDeviceRAG {
 
     static func getSystemPrompt() -> String { systemPrompt }
 }
+
+// MARK: - Rounding helper
+
+private extension Double {
+    func rounded(toPlaces places: Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
+    }
+}
+
