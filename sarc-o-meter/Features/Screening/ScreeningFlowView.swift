@@ -63,12 +63,18 @@ struct ScreeningFlowView: View {
     @ViewBuilder
     private var exerciseTestStep: some View {
         let item = Self.testOrder[testIndex]
+        let hasNext = testIndex + 1 < Self.testOrder.count
+        let nextName = hasNext ? Self.testOrder[testIndex + 1].name : nil
+        
         // Each exercise is skippable ("can't do it" → nil reps). `.id` gives each
         // a fresh camera + rep counter so switching exercises starts clean.
         ExerciseView(
             fixedMode: item.mode,
             allowSkip: true,
-            headline: "Tes \(testIndex + 1)/3: \(item.name)"
+            headline: "Tes \(testIndex + 1)/3: \(item.name)",
+            stepIndex: testIndex,
+            totalSteps: Self.testOrder.count,
+            nextExerciseName: nextName
         ) { reps in
             recordTest(item.mode, reps)
         }
