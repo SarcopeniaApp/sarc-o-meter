@@ -303,7 +303,7 @@ final class RepCounter: ObservableObject {
 
     // ── Auto-Start Posture Detection ─────────────────────────────────────────
     private var postureDetectedStartTime: TimeInterval?
-    private let autoStartDelaySeconds: TimeInterval = 2.5   // Jeda 2.5s setelah terdeteksi utuh sebelum countdown
+    private let autoStartDelaySeconds: TimeInterval = 1.5   // Jeda 1.5s tahan posisi stabil sebelum countdown
 
     // Calf Raise: baseline & hold tracking
     private var heelBaselineY:       Double?
@@ -378,11 +378,16 @@ final class RepCounter: ObservableObject {
                 // Update session state HANYA jika detik bulat berubah, mencegah view terlalu sering re-render
                 if case .running(let current) = self.session, current != currentRemainingInt {
                     self.session = .running(currentRemainingInt)
+                    // ── Sound Effect sisa 5, 4, 3, 2, 1 detik ─────────────────
+                    if (1...5).contains(currentRemainingInt) {
+                        SoundManager.shared.playCountdownSound(number: currentRemainingInt)
+                    }
                 }
                 // Update progress secara real-time
                 self.elapsedFraction = remainingFloat / totalDuration
             } else {
                 self.elapsedFraction = 0.0
+                SoundManager.shared.playFinishSound()
                 self.session = .finished
                 t.invalidate()
             }
@@ -445,13 +450,13 @@ final class RepCounter: ObservableObject {
         debugRange = detector.debugMax - detector.debugMin
     }
 
-    // MARK: - Auto Start Logic (PoseClassifier & Full Body Posture Detection)
+    // MARK: - Auto Start Logic (PoseClassifier & Body Posture Detection)
 
     private func checkAutoStart(_ p: [NormalizedLandmark]) {
         let now = Date().timeIntervalSince1970
 
-        // Wajib: Deteksi seluruh tubuh (bahu, pinggul, lutut, dan pergelangan kaki) terdeteksi di kamera terlebih dahulu
-        guard isFullBodyVisible(p) else {
+        // Wajib: Bagian tubuh utama (bahu, pinggul, lutut) terdeteksi di kamera
+        guard isBodyVisible(p) else {
             resetAutoStartTimer()
             return
         }
@@ -460,7 +465,7 @@ final class RepCounter: ObservableObject {
 
         switch mode {
         case .sitToStand:
-            // Deteksi posisi duduk: knee angle (60°...125°) dengan tubuh tegak terdeteksi
+            // Deteksi posisi duduk: knee angle (55°...135°) atau posisi Hip Y mendekati Knee Y
             isReadyPosture = isSittingPose(p)
 
         case .stepUp, .calfRaise:
@@ -488,19 +493,19 @@ final class RepCounter: ObservableObject {
         }
     }
 
-    /// Memastikan seluruh tubuh terdeteksi oleh kamera (setidaknya satu sisi tampak utuh dari bahu hingga pergelangan kaki)
-    private func isFullBodyVisible(_ p: [NormalizedLandmark]) -> Bool {
-        guard p.count >= 29 else { return false }
-        let vMin: Float = 0.35
-        let leftFull  = vis(p, 11) >= vMin && vis(p, 23) >= vMin && vis(p, 25) >= vMin && vis(p, 27) >= vMin
-        let rightFull = vis(p, 12) >= vMin && vis(p, 24) >= vMin && vis(p, 26) >= vMin && vis(p, 28) >= vMin
-        return leftFull || rightFull
+    /// Memastikan bagian tubuh utama (bahu, pinggul, lutut) terdeteksi oleh kamera
+    private func isBodyVisible(_ p: [NormalizedLandmark]) -> Bool {
+        guard p.count >= 27 else { return false }
+        let vMin: Float = 0.20
+        let leftBody  = vis(p, 11) >= vMin && vis(p, 23) >= vMin && vis(p, 25) >= vMin
+        let rightBody = vis(p, 12) >= vMin && vis(p, 24) >= vMin && vis(p, 26) >= vMin
+        return leftBody || rightBody
     }
 
     /// Deteksi profil tampak samping menggunakan rasio lebar bahu/pinggul terhadap tinggi torso
     /// (Sesuai dengan PoseClassifier di PoseCaptureView & PoseCamera)
     private func isSideStandingPose(_ p: [NormalizedLandmark]) -> Bool {
-        guard p.count >= 29 else { return false }
+        guard p.count >= 27 else { return false }
         let sh11 = p[11], sh12 = p[12]
         let hp23 = p[23], hp24 = p[24]
 
@@ -508,24 +513,44 @@ final class RepCounter: ObservableObject {
         let hipW      = abs(Double(hp23.x - hp24.x))
         let torsoH    = abs(Double((sh11.y + sh12.y) / 2.0 - (hp23.y + hp24.y) / 2.0))
 
-        guard torsoH > 0.05 else { return false }
+        guard torsoH > 0.04 else { return false }
 
-        // Pada tampak samping, rasio lebar bahu atau pinggul terhadap tinggi torso menyempit (< 0.38)
+        // Pada tampak samping, rasio lebar bahu atau pinggul terhadap tinggi torso menyempit (< 0.42)
         let shoulderRatio = shoulderW / torsoH
         let hipRatio      = hipW / torsoH
-        let isSideView    = (shoulderRatio < 0.38) || (hipRatio < 0.38)
+        let isSideView    = (shoulderRatio < 0.42) || (hipRatio < 0.42)
 
-        // Harus dalam posisi berdiri tegak (knee angle >= 145°)
-        guard let knee = bestKneeAngleLenient(p) else { return false }
-        let isStanding = knee >= 145.0
+        // Harus dalam posisi berdiri tegak (knee angle >= 135°)
+        let knee = bestKneeAngleLenient(p) ?? 160.0
+        let isStanding = knee >= 135.0
 
         return isSideView && isStanding
     }
 
-    /// Deteksi posisi duduk untuk Sit to Stand (lutut tekuk 60°...125°)
+    /// Deteksi posisi duduk yang akurat untuk Sit to Stand (lutut tekuk 60°...125°, rasio paha/torso < 0.55)
     private func isSittingPose(_ p: [NormalizedLandmark]) -> Bool {
-        guard let knee = bestKneeAngleLenient(p) else { return false }
-        return (60...125).contains(knee)
+        guard p.count >= 27 else { return false }
+
+        // 1. Jika knee angle terdeteksi dan >= 135°, pengguna PASTI berdiri (BUKAN duduk)
+        if let knee = bestKneeAngleLenient(p) {
+            if knee >= 135.0 { return false } // Berdiri tegak
+            if (60...125).contains(knee) { return true }
+        }
+
+        // 2. Skala-invarian rasio (Tinggi Vertikal Paha / Tinggi Torso):
+        // Orang berdiri: thighH / torsoH >= 0.70
+        // Orang duduk: thighH / torsoH < 0.55 (paha memanjang horizontal di atas kursi)
+        let shY = Double(p[11].y + p[12].y) / 2.0
+        let hY  = Double(p[23].y + p[24].y) / 2.0
+        let kY  = Double(p[25].y + p[26].y) / 2.0
+
+        let torsoH = abs(hY - shY)
+        let thighH = abs(kY - hY)
+
+        guard torsoH > 0.05 else { return false }
+
+        let thighRatio = thighH / torsoH
+        return thighRatio < 0.55
     }
 
     private func bestKneeAngleLenient(_ p: [NormalizedLandmark]) -> Double? {

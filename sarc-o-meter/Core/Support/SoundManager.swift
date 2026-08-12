@@ -108,7 +108,84 @@ final class SoundManager {
         }
     }
 
+    /// Play FINISH sound effect when the 30-second exercise timer completes
+    func playFinishSound() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            // 1. Play synthesized triumph completion chime
+            let wavData = self.generateFinishArpeggioWAV()
+            if let player = try? AVAudioPlayer(data: wavData) {
+                self.audioPlayer = player
+                player.play()
+            }
+
+            // 2. Play iOS System Sound (1025: completion chime)
+            AudioServicesPlaySystemSound(1025)
+
+            // 3. Trigger Success Haptic Feedback
+            let generator = UINotificationFeedbackGenerator()
+            generator.prepare()
+            generator.notificationOccurred(.success)
+        }
+    }
+
     // MARK: - PCM WAV Generator
+
+    /// Generates an ascending 3-note triumph chime WAV (C5 - E5 - G5)
+    private func generateFinishArpeggioWAV(volume: Float = 0.75) -> Data {
+        let sampleRate = 44100.0
+        let notes: [(freq: Double, dur: Double)] = [
+            (523.25, 0.10), // C5
+            (659.25, 0.10), // E5
+            (783.99, 0.25)  // G5 (held longer)
+        ]
+        let totalDuration = notes.reduce(0) { $0 + $1.dur }
+        let numSamples = Int(sampleRate * totalDuration)
+        let numChannels: Int16 = 1
+        let bitsPerSample: Int16 = 16
+        let byteRate = Int32(sampleRate * Double(numChannels * (bitsPerSample / 8)))
+        let blockAlign = Int16(numChannels * (bitsPerSample / 8))
+        let dataSize = Int32(numSamples * Int(blockAlign))
+        let chunkSize = 36 + dataSize
+
+        var data = Data()
+
+        // RIFF header
+        data.append(contentsOf: [UInt8]("RIFF".utf8))
+        data.append(contentsOf: withUnsafeBytes(of: chunkSize.littleEndian) { Array($0) })
+        data.append(contentsOf: [UInt8]("WAVE".utf8))
+
+        // fmt subchunk
+        data.append(contentsOf: [UInt8]("fmt ".utf8))
+        data.append(contentsOf: withUnsafeBytes(of: Int32(16).littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: Int16(1).littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: numChannels.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: Int32(sampleRate).littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: byteRate.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: blockAlign.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: bitsPerSample.littleEndian) { Array($0) })
+
+        // data subchunk
+        data.append(contentsOf: [UInt8]("data".utf8))
+        data.append(contentsOf: withUnsafeBytes(of: dataSize.littleEndian) { Array($0) })
+
+        // Generate samples sequentially for each note in arpeggio
+        for note in notes {
+            let noteSamples = Int(sampleRate * note.dur)
+            for i in 0..<noteSamples {
+                let time = Double(i) / sampleRate
+                let angle = 2.0 * .pi * note.freq * time
+                let progress = Double(i) / Double(noteSamples)
+                let envelope = sin(progress * .pi)
+
+                let sampleValue = Int16(sin(angle) * Double(volume) * envelope * Double(Int16.max))
+                data.append(contentsOf: withUnsafeBytes(of: sampleValue.littleEndian) { Array($0) })
+            }
+        }
+
+        return data
+    }
 
     /// Generates a clean mono 16-bit 44.1kHz PCM WAV buffer with smooth envelope
     private func generateBeepWAV(frequency: Double, duration: Double, volume: Float = 0.7) -> Data {
