@@ -20,6 +20,7 @@
 //  device, this is the knob to change (try `.right`, `.left`, `.rightMirrored`).
 
 import AVFoundation
+import AudioToolbox     // AudioServicesPlaySystemSound (capture "beep")
 import Combine          // ObservableObject / @Published
 import Vision
 import CoreImage
@@ -37,6 +38,7 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
     @Published var guidance = "Hadap kamera, berdiri dengan pose A"
     @Published var progress: Double = 0        // 0…1 hold-to-capture progress
     @Published var poseDetected = false
+    @Published var bodyVisible = false         // whole body (to the ankles) in frame
     @Published var authorized = true
 
     /// Called on the main queue when both photos are captured.
@@ -107,15 +109,19 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
         let request = VNDetectHumanBodyPoseRequest()
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
         try? handler.perform([request])
-        let kind: PoseKind = request.results?.first.map { PoseClassifier.classify($0).0 } ?? .none
+        let observation = request.results?.first
+        let kind: PoseKind = observation.map { PoseClassifier.classify($0).0 } ?? .none
+        let fullyVisible = observation.map { PoseClassifier.fullBodyVisible($0) } ?? false
 
+        // Require the whole body in frame before a pose can count — this stops the
+        // capture from firing while the person is still too close to the camera.
         let target: PoseKind = (logicPhase == .front) ? .frontAPose : .side
-        let match = (kind == target)
+        let match = fullyVisible && (kind == target)
         holdCount = match ? holdCount + 1 : 0
 
         var publishPhase = logicPhase
         var publishProgress = min(1, Double(holdCount) / Double(holdNeeded))
-        var publishGuidance = guidanceText(phase: logicPhase, matching: match)
+        var publishGuidance = guidanceText(phase: logicPhase, matching: match, fullyVisible: fullyVisible)
         var captured = false
         var finished: (UIImage, UIImage)?
 
@@ -143,16 +149,28 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
         DispatchQueue.main.async {
             self.phase = publishPhase
             self.poseDetected = match
+            self.bodyVisible = fullyVisible
             self.progress = publishProgress
             self.guidance = publishGuidance
-            if captured { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+            if captured {
+                // Haptic + a short "beep" so the user knows the pose was captured
+                // and it's time to move on. Placeholder tone — swap for a bundled
+                // sound later.
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                AudioServicesPlaySystemSound(1057)
+            }
             if let f = finished { self.onComplete?(f.0, f.1) }
         }
     }
 
     // MARK: Helpers
 
-    private func guidanceText(phase: Phase, matching: Bool) -> String {
+    private func guidanceText(phase: Phase, matching: Bool, fullyVisible: Bool) -> String {
+        // Getting the whole body in frame comes first — nothing else matters until
+        // the person has stepped back far enough.
+        if !fullyVisible && phase != .done {
+            return "Mundur beberapa langkah sampai seluruh tubuh Anda terlihat"
+        }
         switch phase {
         case .front: return matching ? "Tahan…" : "Hadap kamera, rentangkan tangan membentuk pose A, kaki dibuka"
         case .side:  return matching ? "Tahan…" : "Putar 90° ke samping, tangan rileks"

@@ -9,6 +9,7 @@
 //    fixedMode  — lock to one movement (nil shows the free 3-way picker)
 //    intensity  — 0…1, passed to RepCounter (lower = less ROM needed per rep)
 //    allowSkip  — show a "can't do this" button (screening)
+//    showInstructions — play the how-to pre-roll first (default true; off for the Lab)
 //    onFinish(reps?) — reps done, or nil if skipped / closed
 //
 //  Everything under Features/Exercise/ is the exercise maintainer's; keep this
@@ -23,10 +24,12 @@ struct ExerciseView: View {
     var intensity: Double = 1.0
     var allowSkip: Bool = false
     var headline: String? = nil
+    var showInstructions: Bool = true
     let onFinish: (_ reps: Int?) -> Void
 
     @StateObject private var viewModel = PoseViewModel()
     @StateObject private var counter = RepCounter()
+    @State private var inCamera = false        // false → showing the how-to pre-roll
 
     private var startLabel: String {
         switch counter.session {
@@ -37,6 +40,25 @@ struct ExerciseView: View {
     }
 
     var body: some View {
+        if showInstructionScreen {
+            ExerciseInstructionView(
+                mode: fixedMode ?? counter.mode,
+                allowSkip: allowSkip,
+                onStart: { inCamera = true },
+                onSkip: { finish(nil) }
+            )
+        } else {
+            cameraBody
+        }
+    }
+
+    // The how-to pre-roll runs before a specific exercise; the free-picker Lab
+    // (fixedMode == nil) and any caller that opts out go straight to the camera.
+    private var showInstructionScreen: Bool {
+        showInstructions && fixedMode != nil && !inCamera
+    }
+
+    private var cameraBody: some View {
         ZStack {
             ExerciseCameraPreview(session: viewModel.cameraManager.session)
                 .ignoresSafeArea()
@@ -57,6 +79,10 @@ struct ExerciseView: View {
             counter.intensity = intensity
             viewModel.onPerson = { counter.process($0) }
             viewModel.start()
+            // Auto-start: no "Mulai" tap needed. The countdown begins right away so
+            // the user just gets into position; reps during the countdown don't
+            // count (RepCounter resets calibration when it flips to running).
+            if case .idle = counter.session { counter.startSession() }
         }
         .onDisappear { viewModel.stop() }
     }

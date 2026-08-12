@@ -53,6 +53,20 @@ struct PoseCaptureView: View {
             CameraPreview(session: camera.session)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
 
+            // Pose guide: shows the target pose (A-pose, then side). It's bold while
+            // the person is too close (whole body not yet in frame) to nudge them to
+            // step back, and fades once their full body is visible.
+            Image(camera.phase == .side ? "PoseGuideSide" : "PoseGuideFront")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.white)
+                .padding(.vertical, 34)
+                .opacity(camera.bodyVisible ? 0.16 : 0.72)
+                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
+                .animation(.easeInOut(duration: 0.2), value: camera.phase)
+                .allowsHitTesting(false)
+
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(camera.poseDetected ? Color.green : Color.white.opacity(0.9),
                         lineWidth: 3)
