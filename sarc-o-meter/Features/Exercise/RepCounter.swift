@@ -144,9 +144,11 @@ private final class RepetitionDetector {
     private var observedMin: Double =  .greatestFiniteMagnitude
     private var observedMax: Double = -.greatestFiniteMagnitude
     private var calibrated = false
+    private var initialMetric: Double? // posture at the exact start of the phase
 
     private enum Phase { case atBottom, atTop }
     private var phase: Phase = .atBottom
+    private var hasInitializedPhase = false
 
     private var repStartTime:    TimeInterval = 0
     private var lastRepTime:     TimeInterval = 0
@@ -159,11 +161,23 @@ private final class RepetitionDetector {
         observedMin =  .greatestFiniteMagnitude
         observedMax = -.greatestFiniteMagnitude
         calibrated  = false
+        initialMetric = nil
         isReady     = false
         phase       = .atBottom
+        hasInitializedPhase = false
         lastRepTime = 0
         metricDuringRep = []
         debugMin = 0; debugMax = 0
+    }
+
+    /// Reset count dan phase tanpa menghapus kalibrasi observedMin/Max dari countdown.
+    func softReset() {
+        repCount = 0
+        phase = .atBottom
+        hasInitializedPhase = false
+        initialMetric = nil
+        lastRepTime = 0
+        metricDuringRep.removeAll()
     }
 
     func process(metric: Double, timestamp: TimeInterval) {
@@ -173,9 +187,28 @@ private final class RepetitionDetector {
         debugMin  = observedMin; debugMax = observedMax
         guard isReady else { return }
 
-        metricDuringRep.append(metric)
         let lowThresh  = observedMin + range * config.lowRatioThreshold
         let highThresh = observedMin + range * config.highRatioThreshold
+
+        // Inisialisasi awal phase secara fleksibel berdasarkan posisi AWAL pengguna:
+        // Jika pada saat timer dimulai pengguna berada di atas, set phase ke .atTop
+        // agar begitu pengguna duduk, gerakan langsung terhitung sebagai rep 1.
+        if !hasInitializedPhase {
+            hasInitializedPhase = true
+            let start = initialMetric ?? metric
+            let distToMax = abs(start - observedMax)
+            let distToMin = abs(start - observedMin)
+            
+            // Jika posisi awal lebih dekat ke berdiri (max), set phase = .atTop
+            if distToMax < distToMin {
+                phase = .atTop
+                repStartTime = timestamp
+            } else {
+                phase = .atBottom
+            }
+        }
+
+        metricDuringRep.append(metric)
 
         switch phase {
         case .atBottom:
@@ -186,11 +219,19 @@ private final class RepetitionDetector {
     }
 
     private func updateCalibration(_ metric: Double) {
+        if initialMetric == nil { initialMetric = metric }
         guard calibrated else { observedMin = metric; observedMax = metric; calibrated = true; return }
+        observedMin = min(metric, observedMin)
+        observedMax = max(metric, observedMax)
+
         let r = max(observedMax - observedMin, 1e-6)
-        let relax = r * config.calibrationRelax
-        observedMin = min(metric, observedMin + relax)
-        observedMax = max(metric, observedMax - relax)
+        // Decay/relaxation sangat lambat (0.0002) & tidak akan mengecilkan rentang di bawah minRange * 1.2.
+        // Ini mencegah kalibrasi rusak saat pengguna duduk diam/menunggu countdown.
+        if r > config.minRange * 1.2 {
+            let relax = r * 0.0002
+            observedMin = min(metric, observedMin + relax)
+            observedMax = max(metric, observedMax - relax)
+        }
     }
 
     private func completeRep(timestamp: TimeInterval) {
@@ -222,6 +263,9 @@ final class RepCounter: ObservableObject {
     @Published var session:   SessionState = .idle
     @Published var mode:      ExerciseMode = .sitToStand { didSet { reset() } }
 
+    /// Progress sisa waktu: 1.0 (baru mulai) → 0.0 (habis). Dipakai untuk animasi border timer.
+    @Published var elapsedFraction: Double = 1.0
+
     /// Hasil analisis repetisi terakhir: level + form score + feedback
     @Published var lastRepAnalysis: RepAnalysis?
 
@@ -244,7 +288,7 @@ final class RepCounter: ObservableObject {
     // ── Timer sesi ─────────────────────────────────────────────────────────────
     private var timer: Timer?
     private let countdownSeconds = 5
-    private let runningSeconds   = 10
+    private let runningSeconds   = 30
 
     // ── RepetitionDetector ─────────────────────────────────────────────────────
     private var detector: RepetitionDetector!
@@ -279,33 +323,60 @@ final class RepCounter: ObservableObject {
     func startSession() {
         timer?.invalidate()
         reset()
-        var remaining = countdownSeconds
-        session = .countdown(remaining)
+        session = .countdown(countdownSeconds)
+        elapsedFraction = 1.0
 
+        // ── Sound Effect untuk angka 5 ─────────────────────────────────
+        SoundManager.shared.playCountdownSound(number: countdownSeconds)
+
+        // ── Fase 1: Countdown 5, 4, 3, 2, 1 ──────────────────────────────
+        var cdRemaining = countdownSeconds
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] t in
-            guard let self else { return }
-            switch self.session {
-            case .countdown(let s):
-                remaining = s - 1
-                if remaining > 0 {
-                    self.session = .countdown(remaining)
-                } else {
-                    remaining = self.runningSeconds
-                    // ── Reset detektor & kalibrasi tepat saat running dimulai ──
-                    // Ini memastikan:
-                    // (1) rep yang terdeteksi selama countdown tidak terhitung,
-                    // (2) kalibrasi baseline tumit dimulai dari posisi netral
-                    //     yang benar (bukan posisi jinjit saat countdown), dan
-                    // (3) RepetitionDetector melihat rentang gerak penuh sejak
-                    //     awal sesi sehingga isReady cepat tercapai.
-                    self.resetForRunning()
-                    self.session = .running(remaining)
+            guard let self else { t.invalidate(); return }
+            cdRemaining -= 1
+            if cdRemaining > 0 {
+                self.session = .countdown(cdRemaining)
+                // ── Sound Effect untuk angka 4, 3, 2, 1 ─────────────────
+                SoundManager.shared.playCountdownSound(number: cdRemaining)
+            } else {
+                t.invalidate()
+                // ── Sound Effect untuk Mulai (GO!) ───────────────────────
+                SoundManager.shared.playStartSound()
+                // ── Transisi ke Fase 2: Running ───────────────────────────
+                self.resetForRunning()
+                self.elapsedFraction = 1.0
+                self.startRunningTimer()
+            }
+        }
+    }
+
+    /// Timer terpisah untuk fase running — 30 detik, tidak terikat countdown.
+    private func startRunningTimer() {
+        let totalDuration = Double(runningSeconds)
+        session = .running(runningSeconds)
+        elapsedFraction = 1.0
+
+        let startTime = Date().timeIntervalSince1970
+        
+        // Menggunakan interval kecil (0.05s) agar progress mengecil secara sangat mulus
+        // dan mencapai akurasi absolut di 0.0 saat durasi persis habis.
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] t in
+            guard let self else { t.invalidate(); return }
+            let now = Date().timeIntervalSince1970
+            let elapsed = now - startTime
+            let remainingFloat = max(totalDuration - elapsed, 0)
+            let currentRemainingInt = Int(ceil(remainingFloat))
+            
+            if remainingFloat > 0 {
+                // Update session state HANYA jika detik bulat berubah, mencegah view terlalu sering re-render
+                if case .running(let current) = self.session, current != currentRemainingInt {
+                    self.session = .running(currentRemainingInt)
                 }
-            case .running(let s):
-                remaining = s - 1
-                if remaining > 0 { self.session = .running(remaining) }
-                else { self.session = .finished; t.invalidate() }
-            default:
+                // Update progress secara real-time
+                self.elapsedFraction = remainingFloat / totalDuration
+            } else {
+                self.elapsedFraction = 0.0
+                self.session = .finished
                 t.invalidate()
             }
         }
@@ -315,7 +386,6 @@ final class RepCounter: ObservableObject {
     /// Tidak menyentuh `session` atau timer — hanya state metrik.
     private func resetForRunning() {
         repCount = 0
-        isReady  = false
         debugMetric = 0; debugRange = 0
         lastRepAnalysis = nil
         lastKneeAngle = nil; lastHipAngle = nil
@@ -325,9 +395,10 @@ final class RepCounter: ObservableObject {
         heelBaselineY = nil
         baselineAccumulator.removeAll()
         peakNormHeelRise = 0; holdStartTime = nil; peakHoldDuration = 0
-        // Rebuild detector agar observedMin/Max bersih — tidak ada "memori"
-        // dari gerakan selama countdown yang bisa menyebabkan deteksi salah.
-        rebuildDetector()
+        // Soft reset detektor agar kalibrasi observedMin/Max dari countdown
+        // tetap dipertahankan dan rep 1 terdeteksi dengan cepat & akurat.
+        detector.softReset()
+        isReady = detector.isReady
     }
 
     func stopSession() {
