@@ -23,6 +23,7 @@ struct ScreeningFlowView: View {
     @State private var ruleResult: AssessmentResult?
     @State private var analysisText: String?
     @State private var plan: [Workout] = []
+    @State private var weeklySchedule: String?
     @State private var isGenerating = false
 
     // The exercise test runs the three exercises in order.
@@ -48,6 +49,8 @@ struct ScreeningFlowView: View {
                 DiagnosisView(
                     result: ruleResult,
                     analysis: analysisText,
+                    exercises: plan,
+                    weeklySchedule: weeklySchedule,
                     isGenerating: isGenerating,
                     onFinish: { finish() }
                 )
@@ -93,6 +96,7 @@ struct ScreeningFlowView: View {
         let result = RuleEngine.evaluate(user)
         ruleResult = result
         analysisText = nil
+        weeklySchedule = nil
         isGenerating = true
         step = .analysis
 
@@ -100,19 +104,22 @@ struct ScreeningFlowView: View {
             await llm.loadModel()   // no-op if the shell already loaded it at launch
             llm.appendSystemMessage(OnDeviceRAG.getSystemPrompt())
             let prompt = OnDeviceRAG.buildPrompt(
-                question: "Jelaskan hasil skrining saya secara singkat dan beri satu saran latihan yang aman untuk memulai.",
+                question: "Buat rencana latihan yang aman dan detail berdasarkan profil saya.",
                 result: result,
+                user: user,
                 maxChunks: 3
             )
             let raw = await llm.sendMessage(prompt) ?? ""
             if let parsed = OnDeviceRAG.parse(raw) {
                 analysisText = parsed.analysis
                 plan = parsed.plan
+                weeklySchedule = parsed.weeklySchedule
             } else {
                 // Model didn't return usable JSON → show whatever text came back
                 // (if any) and fall back to the deterministic plan.
                 analysisText = raw.isEmpty ? nil : raw
                 plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
             }
             isGenerating = false
         }
@@ -125,8 +132,10 @@ struct ScreeningFlowView: View {
             overallRisk: ruleResult.overallRisk.rawValue,
             workoutRestriction: ruleResult.workoutRestriction.rawValue,
             analysis: analysisText ?? "",
-            plan: plan.isEmpty ? ExercisePlan.derive(from: ruleResult) : plan
+            plan: plan.isEmpty ? ExercisePlan.derive(from: ruleResult) : plan,
+            weeklySchedule: weeklySchedule ?? ExercisePlan.weeklySchedule(for: ruleResult)
         )
         onFinished()
     }
 }
+
