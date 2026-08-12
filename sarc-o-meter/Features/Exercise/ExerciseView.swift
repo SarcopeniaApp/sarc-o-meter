@@ -172,6 +172,9 @@ struct ExerciseView: View {
     @ViewBuilder
     private var centerContent: some View {
         switch counter.session {
+        case .idle:
+            positionPromptCard
+
         case .countdown(let s):
             // Angka countdown besar di tengah layar
             Text("\(s)")
@@ -197,12 +200,8 @@ struct ExerciseView: View {
     @ViewBuilder
     private var bottomControls: some View {
         switch counter.session {
-        case .idle:
-            startButton
-                .padding(.bottom, 60)
-
-        case .countdown:
-            // Tidak ada kontrol di bawah saat countdown
+        case .idle, .countdown:
+            // Otomatis mulai dari deteksi posisi — tidak ada tombol manual
             EmptyView()
 
         case .running(let s):
@@ -214,23 +213,40 @@ struct ExerciseView: View {
         }
     }
 
-    // MARK: - Tombol Mulai (lingkaran hijau)
+    // MARK: - Kartu Petunjuk Posisi (Auto Start)
 
-    private var startButton: some View {
-        Button {
-            counter.startSession()
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 90, height: 90)
-                    .shadow(color: .green.opacity(0.4), radius: 12, y: 4)
+    private var positionPromptCard: some View {
+        let isStabilizing = counter.isPostureStabilizing
 
-                Text("Mulai")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-            }
+        return VStack(spacing: 10) {
+            Image(systemName: isStabilizing ? "checkmark.circle.fill" : (counter.mode == .sitToStand ? "figure.seat.row.left" : "figure.stand"))
+                .font(.system(size: 40))
+                .foregroundColor(isStabilizing ? .green : .yellow)
+                .scaleEffect(isStabilizing ? 1.15 : 1.0)
+                .animation(.spring(response: 0.3), value: isStabilizing)
+
+            Text(isStabilizing ? "Posisi Terdeteksi!" : (counter.mode == .sitToStand ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+
+            Text(isStabilizing ? "Tahan posisi" : (counter.mode == .sitToStand ? "Ambil posisi duduk di kursi untuk mulai otomatis" : "Berdiri tegak menghadap samping untuk mulai otomatis"))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.black.opacity(0.65))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(isStabilizing ? Color.green.opacity(0.8) : Color.yellow.opacity(0.6), lineWidth: 1.5)
+                )
+        )
+        .padding(.horizontal, 30)
+        .shadow(color: .black.opacity(0.35), radius: 10, y: 5)
+        .animation(.easeInOut(duration: 0.2), value: isStabilizing)
     }
 
     // MARK: - Timer Circle (running state)
@@ -265,7 +281,7 @@ struct ExerciseView: View {
                 .foregroundColor(.black)
 
             // Sisa waktu kecil di bawah angka
-            Text("\(remaining)s")
+            Text("repetisi")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gray)
                 .offset(y: 30)
