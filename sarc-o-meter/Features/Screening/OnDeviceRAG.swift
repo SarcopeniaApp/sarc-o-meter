@@ -145,10 +145,13 @@ enum OnDeviceRAG {
 
         Riwayat klinis:
         - Operasi/rawat inap baru: \(user.hasRecentSurgeryOrHospitalization ? "Ya" : "Tidak")
-        - Kardiovaskular tidak stabil: \(user.hasUnstableCardio ? "Ya" : "Tidak")
-        - Riwayat jatuh: \(user.hasRecentFalls ? "Ya" : "Tidak")
+        - Gangguan jantung (berdebar/diagnosis): \(user.hasHeartCondition ? "Ya" : "Tidak")
+        - Tekanan darah tinggi tidak terkontrol: \(user.hasUncontrolledBP ? "Ya" : "Tidak")
+        - Sering kehilangan keseimbangan/pusing: \(user.hasBalanceOrDizziness ? "Ya" : "Tidak")
         - Nyeri sendi/patah tulang: \(user.hasAcuteJointPainOrFracture ? "Ya" : "Tidak")
         - Kondisi neurologis: \(user.hasNeurologicalCondition ? "Ya" : "Tidak")
+        - Mengonsumsi obat-obatan rutin: \(user.hasRoutineMedication ? "Ya" : "Tidak")
+        - Menggunakan alat bantu jalan: \(user.hasWalkingAid ? "Ya" : "Tidak")
 
         Rencana latihan awal yang disarankan (silakan sesuaikan, tetap aman):
         \(baseline)
