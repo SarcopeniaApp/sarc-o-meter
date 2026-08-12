@@ -90,6 +90,8 @@ enum OnDeviceRAG {
     6. Selalu sertakan catatan bahwa ini adalah alat bantu, bukan pengganti evaluasi \
     medis profesional.
     7. Sertakan tips pernapasan: JANGAN menahan napas saat latihan, bernapas normal.
+    8. Jika ada "Pembatasan latihan: hanya gerakan ringan", HANYA resepkan 1 latihan \
+    ringan (Calf Raise) dengan intensitas sangat rendah. JANGAN resepkan 3 latihan.
 
     FORMAT OUTPUT — balas HANYA dengan JSON valid, tanpa markdown fence, dengan struktur \
     persis:
@@ -234,9 +236,9 @@ enum OnDeviceRAG {
     private static func riskLabel(_ r: RiskCategory) -> String {
         switch r {
         case .low:        return "Risiko Rendah"
-        case .mid:        return "Risiko Menengah (kemungkinan sarkopenia)"
-        case .high:       return "Risiko Tinggi (sarkopenia terkonfirmasi)"
-        case .severe:     return "Risiko Berat (sarkopenia + performa rendah)"
+        case .mid:        return "Risiko Menengah"
+        case .high:       return "Risiko Tinggi"
+        case .severe:     return "Risiko Berat"
         case .unassessed: return "Belum dinilai (data kurang)"
         }
     }

@@ -110,6 +110,13 @@ struct ScreeningFlowView: View {
                 maxChunks: 3
             )
             let raw = await llm.sendMessage(prompt) ?? ""
+            
+            // If mobility-only restriction, always use deterministic plan
+            if result.workoutRestriction == .mobilityOnly {
+                plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            }
+
             if let parsed = OnDeviceRAG.parse(raw) {
                 analysisText = parsed.analysis
                 plan = parsed.plan

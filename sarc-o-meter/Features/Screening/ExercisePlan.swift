@@ -70,7 +70,7 @@ enum ExercisePlan {
                 progressionTip: "Tambahkan beban 1-2 kg di kaki atau tingkatkan jumlah repetisi hingga 15."
             ),
             Workout(
-                kind: .calfRaise, intensity: intensity, repsPerSet: max(reps, 15), setsPerDay: sets,
+                kind: .calfRaise, intensity: intensity, repsPerSet: max(reps, 10), setsPerDay: sets,
                 tempo: "Lambat dan terkontrol (2 detik naik, 2 detik turun)",
                 restSeconds: restSec,
                 safetyNotes: "Jangan mengangkat tumit lebih dari 10 cm untuk menghindari cedera tendon Achilles.",
