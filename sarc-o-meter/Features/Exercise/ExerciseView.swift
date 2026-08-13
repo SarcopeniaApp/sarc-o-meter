@@ -85,10 +85,6 @@ struct ExerciseView: View {
             counter.intensity = intensity
             viewModel.onPerson = { counter.process($0) }
             viewModel.start()
-            // Auto-start: no "Mulai" tap needed. The countdown begins right away so
-            // the user just gets into position; reps during the countdown don't
-            // count (RepCounter resets calibration when it flips to running).
-            if case .idle = counter.session { counter.startSession() }
         }
         .onDisappear { viewModel.stop() }
         .onChange(of: counter.session) { _, newState in
