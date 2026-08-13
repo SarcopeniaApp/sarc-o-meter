@@ -112,8 +112,7 @@ struct ScreeningFlowView: View {
             let prompt = OnDeviceRAG.buildPrompt(
                 question: "Buat rencana latihan yang aman dan detail berdasarkan profil saya.",
                 result: result,
-                user: user,
-                maxChunks: 3
+                user: user
             )
             let raw = await llm.sendMessage(prompt) ?? ""
 

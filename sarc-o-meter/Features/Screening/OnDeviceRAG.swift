@@ -59,11 +59,29 @@ enum OnDeviceRAG {
         return tags
     }
 
-    /// Chunks whose tags intersect the given tags, capped at `limit` (order
-    /// preserved). The cap keeps the prompt short enough for the 0.5B to prefill
-    /// quickly — raise it once you're on a faster model / batched-prefill path.
-    static func retrieve(tags: Set<String>, limit: Int = 2) -> [KnowledgeChunk] {
-        Array(chunks.filter { !Set($0.tags).isDisjoint(with: tags) }.prefix(limit))
+    /// Risk-aware chunk cap. Higher-risk users get more context because recall is
+    /// more important when recommendations need stronger grounding.
+    static func maxChunks(for result: AssessmentResult) -> Int {
+        switch result.overallRisk {
+        case .severe, .high: return 6
+        case .mid: return 4
+        case .low, .unassessed: return 3
+        }
+    }
+
+    /// Chunks whose tags intersect the given tags, capped at `limit`. Safety-critical
+    /// chunks are pinned first for red flags or severe risk, then normal JSON order is
+    /// preserved for the remaining matching chunks.
+    static func retrieve(tags: Set<String>, limit: Int, pinnedIDs: Set<String> = []) -> [KnowledgeChunk] {
+        let matchingChunks = chunks.filter { !Set($0.tags).isDisjoint(with: tags) }
+        let pinnedChunks = chunks.filter { pinnedIDs.contains($0.id) }
+        let remainingChunks = matchingChunks.filter { !pinnedIDs.contains($0.id) }
+        return Array((pinnedChunks + remainingChunks).prefix(limit))
+    }
+
+    private static func safetyCriticalChunkIDs(for result: AssessmentResult) -> Set<String> {
+        guard !result.redFlags.isEmpty || result.overallRisk == .severe else { return [] }
+        return ["kb_contraindication_01", "kb_risk_high_severe_01"]
     }
 
     // MARK: Prompt (grounded — mirrors backend/rag/prompt_builder.py)
@@ -115,10 +133,12 @@ enum OnDeviceRAG {
     /// baseline plan (the model refines it, and it's the parse fallback), and the
     /// retrieved references. A skipped exercise → an "unable to self-test" red flag
     /// here, which steers the analysis + gentles the plan.
-    static func buildPrompt(question: String, result: AssessmentResult, user: User, maxChunks: Int = 3) -> String {
+    static func buildPrompt(question: String, result: AssessmentResult, user: User, maxChunks: Int? = nil) -> String {
         let tags = relevantTags(for: result)
-        let retrieved = retrieve(tags: tags, limit: maxChunks)
-        print("[OnDeviceRAG] tags=\(tags.sorted()) → \(retrieved.count) chunks \(retrieved.map(\.id))")
+        let effectiveMaxChunks = maxChunks ?? Self.maxChunks(for: result)
+        let pinnedIDs = safetyCriticalChunkIDs(for: result)
+        let retrieved = retrieve(tags: tags, limit: effectiveMaxChunks, pinnedIDs: pinnedIDs)
+        print("[OnDeviceRAG] tags=\(tags.sorted()) maxChunks=\(effectiveMaxChunks) pinned=\(pinnedIDs.sorted()) → \(retrieved.count) chunks \(retrieved.map(\.id))")
 
         let references = retrieved
             .map { "[\($0.source)]\n\($0.content)" }
