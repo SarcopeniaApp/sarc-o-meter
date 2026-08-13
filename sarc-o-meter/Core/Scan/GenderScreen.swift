@@ -15,7 +15,7 @@ struct GenderScreen: View {
 
     var body: some View {
         PageWrapper(
-            title: "Tentang Anda",
+            title: "Jenis Kelamin",
             content: {
                 VStack(alignment: .leading, spacing: 24) {
                     Subtitle("Apa jenis kelamin Anda saat lahir?")
