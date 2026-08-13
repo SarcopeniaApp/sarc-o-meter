@@ -19,11 +19,14 @@ enum RuleEngine {
         if user.hasRecentSurgeryOrHospitalization {
             result.redFlags.append("Operasi besar atau rawat inap baru-baru ini (< 3 bulan).")
         }
-        if user.hasUnstableCardio {
-            result.redFlags.append("Kondisi kardiovaskular tidak stabil.")
+        if user.hasHeartCondition {
+            result.redFlags.append("Gangguan jantung (sering berdebar-debar atau riwayat diagnosis jantung).")
         }
-        if user.hasRecentFalls {
-            result.redFlags.append("Riwayat sering terjatuh.")
+        if user.hasUncontrolledBP {
+            result.redFlags.append("Tekanan darah tinggi tidak terkontrol.")
+        }
+        if user.hasBalanceOrDizziness {
+            result.redFlags.append("Sering kehilangan keseimbangan atau merasa pusing.")
         }
         if user.hasAcuteJointPainOrFracture {
             result.redFlags.append("Nyeri sendi akut atau patah tulang belum sembuh.")
@@ -31,10 +34,16 @@ enum RuleEngine {
         if user.hasNeurologicalCondition {
             result.redFlags.append("Kondisi neurologis yang memengaruhi keseimbangan.")
         }
+        if user.hasRoutineMedication {
+            result.redFlags.append("Mengonsumsi obat-obatan rutin (perlu pertimbangan interaksi obat & latihan).")
+        }
+        if user.hasWalkingAid {
+            result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
+        }
 
-        // Safety restriction: surgery/hospitalization or unstable cardio limits
-        // the plan to supervised mobility & balance work only.
-        if user.hasRecentSurgeryOrHospitalization || user.hasUnstableCardio {
+        // Safety restriction: surgery/hospitalization, heart condition, or walking
+        // aid limits the plan to supervised mobility & balance work only.
+        if user.hasRecentSurgeryOrHospitalization || user.hasHeartCondition || user.hasWalkingAid {
             result.workoutRestriction = .mobilityOnly
         }
 

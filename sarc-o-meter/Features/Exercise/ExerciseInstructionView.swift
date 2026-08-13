@@ -101,12 +101,17 @@ extension ExerciseMode {
 
     /// Bundled placeholder how-to video (Features/Exercise/Instructions/<key>.mp4).
     var instructionVideoURL: URL? {
-        let key: String
+        let keys: [String]
         switch self {
-        case .sitToStand: key = "sitToStand"
-        case .stepUp:     key = "stepUp"
-        case .calfRaise:  key = "calfRaise"
+        case .sitToStand: keys = ["sit-to-stand", "sitToStand", "sit-to stand"]
+        case .stepUp:     keys = ["step-up", "stepUp"]
+        case .calfRaise:  keys = ["calf-raise", "calfRaise"]
         }
-        return Bundle.main.url(forResource: key, withExtension: "mp4")
+        for key in keys {
+            if let url = Bundle.main.url(forResource: key, withExtension: "mp4") {
+                return url
+            }
+        }
+        return nil
     }
 }

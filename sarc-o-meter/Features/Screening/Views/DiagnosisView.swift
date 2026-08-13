@@ -112,7 +112,7 @@ struct DiagnosisView: View {
     private var restrictionCard: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "hand.raised.fill").foregroundStyle(.red)
-            Text("Demi keselamatan Anda, latihan dibatasi pada gerakan ringan & keseimbangan — minta izin profesional sebelum latihan yang lebih berat.")
+            Text("Demi keselamatan Anda, latihan dibatasi pada gerakan ringan & keseimbangan. Minta izin profesional sebelum latihan yang lebih berat.")
                 .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -275,9 +275,9 @@ struct DiagnosisView: View {
     private var riskLabel: String {
         switch result.overallRisk {
         case .low:        return "Risiko Rendah"
-        case .mid:        return "Risiko Menengah (Kemungkinan Sarkopenia)"
-        case .high:       return "Risiko Tinggi (Sarkopenia Terkonfirmasi)"
-        case .severe:     return "Risiko Berat (Sarkopenia + Performa Rendah)"
+        case .mid:        return "Risiko Menengah"
+        case .high:       return "Risiko Tinggi"
+        case .severe:     return "Risiko Berat"
         case .unassessed: return "Belum Dinilai (Data Kurang)"
         }
     }

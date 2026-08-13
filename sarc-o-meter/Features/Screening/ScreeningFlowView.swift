@@ -63,12 +63,18 @@ struct ScreeningFlowView: View {
     @ViewBuilder
     private var exerciseTestStep: some View {
         let item = Self.testOrder[testIndex]
+        let hasNext = testIndex + 1 < Self.testOrder.count
+        let nextName = hasNext ? Self.testOrder[testIndex + 1].name : nil
+        
         // Each exercise is skippable ("can't do it" → nil reps). `.id` gives each
         // a fresh camera + rep counter so switching exercises starts clean.
         ExerciseView(
             fixedMode: item.mode,
             allowSkip: true,
-            headline: "Tes \(testIndex + 1)/3: \(item.name)"
+            headline: "Tes \(testIndex + 1)/3: \(item.name)",
+            stepIndex: testIndex,
+            totalSteps: Self.testOrder.count,
+            nextExerciseName: nextName
         ) { reps in
             recordTest(item.mode, reps)
         }
@@ -110,24 +116,26 @@ struct ScreeningFlowView: View {
                 maxChunks: 3
             )
             let raw = await llm.sendMessage(prompt) ?? ""
-            
-            // If mobility-only restriction, always use deterministic plan
-            if result.workoutRestriction == .mobilityOnly {
-                plan = ExercisePlan.derive(from: result)
-                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
-            }
 
-            if let parsed = OnDeviceRAG.parse(raw) {
+            if let parsed = OnDeviceRAG.parse(raw, result: result) {
                 analysisText = parsed.analysis
                 plan = parsed.plan
                 weeklySchedule = parsed.weeklySchedule
             } else {
-                // Model didn't return usable JSON → show whatever text came back
-                // (if any) and fall back to the deterministic plan.
-                analysisText = raw.isEmpty ? nil : raw
+                // Model didn't return usable JSON → try to extract just the
+                // insight text; fall back to the deterministic plan.
+                analysisText = OnDeviceRAG.extractInsight(from: raw)
                 plan = ExercisePlan.derive(from: result)
                 weeklySchedule = ExercisePlan.weeklySchedule(for: result)
             }
+
+            // Safety override: mobility-only restriction or severe risk always
+            // forces the deterministic single-exercise plan, regardless of LLM output.
+            if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
+                plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            }
+
             isGenerating = false
         }
     }
