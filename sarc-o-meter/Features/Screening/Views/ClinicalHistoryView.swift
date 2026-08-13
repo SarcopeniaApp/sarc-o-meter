@@ -25,14 +25,20 @@ struct ClinicalHistoryView: View {
                 VStack(spacing: 12) {
                     toggleRow("Operasi atau rawat inap baru-baru ini", "Dalam 3 bulan terakhir",
                               $user.hasRecentSurgeryOrHospitalization)
-                    toggleRow("Kondisi jantung tidak stabil", "mis. nyeri dada, tekanan darah tidak terkontrol",
-                              $user.hasUnstableCardio)
-                    toggleRow("Sering terjatuh", "Dalam 12 bulan terakhir",
-                              $user.hasRecentFalls)
+                    toggleRow("Gangguan jantung", "Apakah sering berdebar-debar, atau pernah didiagnosa gangguan jantung oleh tenaga medis?",
+                              $user.hasHeartCondition)
+                    toggleRow("Tekanan darah tinggi tidak terkontrol", "Tekanan darah yang tidak terkelola dengan baik dapat memengaruhi keselamatan latihan",
+                              $user.hasUncontrolledBP)
+                    toggleRow("Sering kehilangan keseimbangan atau pusing", "Apakah akhir-akhir ini sering merasa tidak stabil saat berdiri atau berjalan?",
+                              $user.hasBalanceOrDizziness)
                     toggleRow("Nyeri sendi akut atau patah tulang belum sembuh", nil,
                               $user.hasAcuteJointPainOrFracture)
                     toggleRow("Kondisi yang memengaruhi keseimbangan", "mis. stroke, Parkinson",
                               $user.hasNeurologicalCondition)
+                    toggleRow("Rutin mengonsumsi obat-obatan", "mis. obat diabetes, pengencer darah, obat jantung",
+                              $user.hasRoutineMedication)
+                    toggleRow("Menggunakan alat bantu jalan", "mis. tongkat, walker, kursi roda",
+                              $user.hasWalkingAid)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
