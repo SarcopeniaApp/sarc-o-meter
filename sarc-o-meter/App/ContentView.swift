@@ -8,15 +8,19 @@
 //     (auto or manual) → result → questionnaire → exercise test → analysis, then
 //     save `user` and drop into the Tracker.
 //
-//  It owns only the CORE journey (personal info + the scan) and hands off to the
-//  feature entry views: ScreeningFlowView and TrackerView.
+//  It drives the ENTIRE screening flow directly — personal info, the scan, the
+//  questionnaire, the 3-exercise test, and the analysis — presenting each feature
+//  view (ClinicalHistoryView, ExerciseView, DiagnosisView) itself. Once done it
+//  hands off to TrackerView.
 
 import SwiftUI
 import UIKit
 
 struct ContentView: View {
     private enum Step {
-        case greeting, gender, age, height, weight, instructions, manual, measuring, result, screening
+        case greeting, gender, age, height, weight, instructions, manual, capturing, measuring, result
+        // Screening (formerly ScreeningFlowView, now driven here):
+        case questionnaire, exerciseTest, analysis
     }
 
     // The single source of truth. Loaded once; a saved user whose screening is
@@ -25,7 +29,6 @@ struct ContentView: View {
 
     @State private var step: Step = .greeting
     @State private var errorText: String?
-    @State private var showCapture = false
 
     // Manual-entry sub-flow state (a transient input buffer; committed into `user`).
     @State private var manualIndex = 0
@@ -34,15 +37,30 @@ struct ContentView: View {
 
     private struct ManualField { let key: String; let name: String; let subtitle: String }
     private static let manualFields: [ManualField] = [
-        ManualField(key: "chest", name: "Dada",     subtitle: "Ukur bagian terlebar dada Anda, dalam sentimeter."),
-        ManualField(key: "waist", name: "Pinggang", subtitle: "Ukur lingkar pinggang alami Anda, dalam sentimeter."),
-        ManualField(key: "hip",   name: "Pinggul",  subtitle: "Ukur bagian terlebar pinggul Anda, dalam sentimeter."),
-        ManualField(key: "calf",  name: "Betis",    subtitle: "Ukur bagian tertebal betis Anda, dalam sentimeter."),
+        ManualField(key: "chest", name: "Dada",     subtitle: "Ukur bagian terlebar dada Anda."),
+        ManualField(key: "waist", name: "Pinggang", subtitle: "Ukur lingkar pinggang alami Anda."),
+        ManualField(key: "hip",   name: "Pinggul",  subtitle: "Ukur bagian terlebar pinggul Anda."),
+        ManualField(key: "calf",  name: "Betis",    subtitle: "Ukur bagian tertebal betis Anda."),
     ]
 
     @AppStorage("debugServer") private var debugServer = ""
     @State private var predictor: BMNetPredictor? = try? BMNetPredictor()
     @State private var llm = LLMManager()
+
+    // Screening flow state (moved here from the former ScreeningFlowView).
+    @State private var testIndex = 0
+    @State private var ruleResult: AssessmentResult?
+    @State private var analysisText: String?
+    @State private var plan: [Workout] = []
+    @State private var weeklySchedule: String?
+    @State private var isGenerating = false
+
+    // The exercise test runs the three exercises in order.
+    private static let testOrder: [(mode: ExerciseMode, name: String)] = [
+        (.sitToStand, "Berdiri dari kursi"),
+        (.stepUp,     "Naik step"),
+        (.calfRaise,  "Jinjit (angkat tumit)"),
+    ]
 
     var body: some View {
         ZStack {
@@ -52,13 +70,6 @@ struct ContentView: View {
                 TrackerView(record: record, onRestartScreening: { restartScreening() })
             } else {
                 content
-            }
-        }
-        .fullScreenCover(isPresented: $showCapture) {
-            PoseCaptureView { front, side in
-                showCapture = false
-                step = .measuring
-                runMeasurement(front: front, side: side)
             }
         }
         .alert("Terjadi kesalahan",
@@ -122,6 +133,16 @@ struct ContentView: View {
 
         case .manual:
             manualScreen
+                
+        case .capturing:
+            PoseCaptureView(
+                onBack: {
+                    step = .instructions
+                }
+            ) { front, side in
+                step = .measuring
+                runMeasurement(front: front, side: side)
+            }
 
         case .measuring:
             MeasuringView()
@@ -130,18 +151,121 @@ struct ContentView: View {
             ResultScreen(
                 user: user,
                 onRescan: { step = .instructions },
-                onFinish: { step = .screening }
+                onFinish: { step = .questionnaire }
             )
 
-        case .screening:
-            // ── Screening feature: questionnaire → exercise test → analysis ──
-            ScreeningFlowView(
-                user: user,
-                llm: llm,
-                onExit: { step = .result },
-                onFinished: { UserStore.save(user) }   // user.screening is set → tracker
-            )
+        // ── Screening: questionnaire → exercise test → analysis ──
+        case .questionnaire:
+            ClinicalHistoryView(user: user, onBack: { step = .result }) {
+                step = .exerciseTest
+            }
+
+        case .exerciseTest:
+            exerciseTestStep
+
+        case .analysis:
+            if let ruleResult {
+                DiagnosisView(
+                    result: ruleResult,
+                    analysis: analysisText,
+                    exercises: plan,
+                    weeklySchedule: weeklySchedule,
+                    isGenerating: isGenerating,
+                    onFinish: { finishScreening() }
+                )
+            }
         }
+    }
+
+    // MARK: Screening (questionnaire → 3-exercise test → on-device analysis)
+
+    @ViewBuilder
+    private var exerciseTestStep: some View {
+        let item = Self.testOrder[testIndex]
+        let hasNext = testIndex + 1 < Self.testOrder.count
+        let nextName = hasNext ? Self.testOrder[testIndex + 1].name : nil
+
+        // Each exercise is skippable ("can't do it" → nil reps). `.id` gives each a
+        // fresh camera + rep counter so switching exercises starts clean.
+        ExerciseView(
+            fixedMode: item.mode,
+            allowSkip: true,
+            headline: item.name,
+            stepIndex: testIndex,
+            totalSteps: Self.testOrder.count,
+            nextExerciseName: nextName
+        ) { reps in
+            recordTest(item.mode, reps)
+        }
+        .id(item.mode)
+    }
+
+    private func recordTest(_ mode: ExerciseMode, _ reps: Int?) {
+        switch mode {
+        case .sitToStand: user.sitToStandReps = reps
+        case .stepUp:     user.stepUpReps = reps
+        case .calfRaise:  user.calfRaiseReps = reps
+        }
+        if testIndex + 1 < Self.testOrder.count {
+            testIndex += 1
+        } else {
+            runAnalysis()
+        }
+    }
+
+    private func runAnalysis() {
+        // Everything the rule engine needs (gender, height, calf, waist, clinical
+        // history, the reps just recorded) already lives on `user`.
+        let result = RuleEngine.evaluate(user)
+        ruleResult = result
+        analysisText = nil
+        weeklySchedule = nil
+        isGenerating = true
+        step = .analysis
+
+        Task {
+            await llm.loadModel()   // no-op if the shell already loaded it at launch
+            llm.appendSystemMessage(OnDeviceRAG.getSystemPrompt())
+            let prompt = OnDeviceRAG.buildPrompt(
+                question: "Buat rencana latihan yang aman dan detail berdasarkan profil saya.",
+                result: result,
+                user: user,
+                maxChunks: 3
+            )
+            let raw = await llm.sendMessage(prompt) ?? ""
+
+            if let parsed = OnDeviceRAG.parse(raw, result: result) {
+                analysisText = parsed.analysis
+                plan = parsed.plan
+                weeklySchedule = parsed.weeklySchedule
+            } else {
+                analysisText = OnDeviceRAG.extractInsight(from: raw)
+                plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            }
+
+            // Safety override: mobility-only restriction or severe risk always forces
+            // the deterministic single-exercise plan, regardless of LLM output.
+            if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
+                plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            }
+
+            isGenerating = false
+        }
+    }
+
+    private func finishScreening() {
+        guard let ruleResult else { return }
+        user.screening = ScreeningRecord(
+            completedAt: Date(),
+            overallRisk: ruleResult.overallRisk.rawValue,
+            workoutRestriction: ruleResult.workoutRestriction.rawValue,
+            analysis: analysisText ?? "",
+            plan: plan.isEmpty ? ExercisePlan.derive(from: ruleResult) : plan,
+            weeklySchedule: weeklySchedule ?? ExercisePlan.weeklySchedule(for: ruleResult)
+        )
+        UserStore.save(user)   // user.screening is set → shell flips to the tracker
     }
 
     // MARK: Keypad ↔ User bindings (age is years; height/weight are whole cm/kg)
@@ -215,7 +339,7 @@ struct ContentView: View {
             errorText = "Tidak dapat memuat model pengukuran (bmnet.mlpackage). Tambahkan ke target aplikasi."
             return
         }
-        showCapture = true
+        step = .capturing
     }
 
     private func restartScreening() {
@@ -224,6 +348,12 @@ struct ContentView: View {
         manualIndex = 0
         manualEntry = 0
         manualValues = [:]
+        testIndex = 0
+        ruleResult = nil
+        analysisText = nil
+        plan = []
+        weeklySchedule = nil
+        isGenerating = false
         step = .gender
     }
 

@@ -12,16 +12,11 @@ struct ClinicalHistoryView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(onBack: onBack)
-
-            ScreenTitle(
-                title: "Cek Kesehatan",
-                subtitle: "Beberapa pertanyaan keselamatan. Ini menandai kondisi yang sebaiknya diperiksa profesional sebelum berolahraga."
-            )
-            .padding(.top, 20)
-
-            ScrollView {
+        PageWrapper(
+            title: "Cek Kesehatan",
+            content: {
+                Subtitle("Beberapa pertanyaan keselamatan. Ini menandai kondisi yang sebaiknya diperiksa profesional sebelum berolahraga.")
+                
                 VStack(spacing: 12) {
                     toggleRow("Operasi atau rawat inap baru-baru ini", "Dalam 3 bulan terakhir",
                               $user.hasRecentSurgeryOrHospitalization)
@@ -40,16 +35,13 @@ struct ClinicalHistoryView: View {
                     toggleRow("Menggunakan alat bantu jalan", "mis. tongkat, walker, kursi roda",
                               $user.hasWalkingAid)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-            }
-
-            PrimaryButton(title: "Lanjut", action: onNext)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+                .padding(.bottom, 24)
+            },
+            footer: {
+                PrimaryButton(title: "Lanjut", action: onNext)
+            },
+            onBack: onBack
+        )
     }
 
     private func toggleRow(_ title: String, _ subtitle: String?, _ isOn: Binding<Bool>) -> some View {

@@ -14,66 +14,52 @@ struct ExerciseInstructionView: View {
     var allowSkip: Bool = false
     let onStart: () -> Void
     let onSkip: () -> Void
+    
+    private let VPW = UIScreen.main.bounds.size.width
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Panduan Latihan")
-
-            ScreenTitle(title: mode.displayName,
-                        subtitle: "Lihat dulu caranya, lalu tekan Mulai ketika Anda siap.")
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-
-            videoFrame
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-
-            Text(mode.instructionText)
-                .font(.system(size: 15))
-                .foregroundStyle(Theme.ink)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 28)
-                .padding(.top, 18)
-
-            Spacer(minLength: 12)
-
-            VStack(spacing: 12) {
-                PrimaryButton(title: "Mulai", action: onStart)
-                if allowSkip {
-                    Button(action: onSkip) {
-                        Text("Saya tidak bisa melakukannya")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Theme.muted)
-                            .underline()
+        PageWrapper(
+            title: "Panduan Latihan",
+            content: {
+                VStack(spacing: 24) {
+                    ZStack {
+                        if let url = mode.instructionVideoURL {
+                            LoopingVideoPlayer(url: url)
+                        } else {
+                            Theme.accentSoft
+                            VStack(spacing: 10) {
+                                Image(systemName: "film")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(Theme.accent)
+                                Text("Video panduan akan ditampilkan di sini")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                        }
                     }
+                    .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .shadow(color: Theme.cardShadow, radius: 10, y: 6)
+                    
+                    VStack(spacing: 8) {
+                        Text(mode.displayName)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Theme.ink)
+                        Text(mode.instructionText)
+                            .font(.system(size: 15))
+                            .foregroundStyle(Theme.muted)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    PrimaryButton(title: "Mulai", action: onStart)
                 }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 14)
-        }
-        .background(Theme.bg.ignoresSafeArea())
-    }
-
-    private var videoFrame: some View {
-        ZStack {
-            if let url = mode.instructionVideoURL {
-                LoopingVideoPlayer(url: url)
-            } else {
-                Theme.accentSoft
-                VStack(spacing: 10) {
-                    Image(systemName: "film")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Theme.accent)
-                    Text("Video panduan akan ditampilkan di sini")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.muted)
-                }
-            }
-        }
-        .aspectRatio(3.0 / 4.0, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Theme.cardShadow, radius: 10, y: 6)
+                .frame(maxWidth: .infinity)
+            },
+            scrollable: false
+        )
     }
 }
 
