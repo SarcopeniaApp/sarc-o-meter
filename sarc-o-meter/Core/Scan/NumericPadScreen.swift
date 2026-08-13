@@ -9,33 +9,44 @@
 import SwiftUI
 
 struct NumericPadScreen: View {
-    var title: String = "Pindai Tubuh"   // manual-entry screens override with the measurement name
+    @Binding var value: Int
+    
+    var title: String   // manual-entry screens override with the measurement name
     let subtitle: String
     let unit: String        // e.g. "cm" / "kg"
-    @Binding var value: Int
     var onBack: (() -> Void)? = nil
     let onNext: () -> Void
+    
+    init(title: String = "Pindai Tubuh", subtitle: String = "", unit: String = "cm", value: Binding<Int> = Binding.constant(0), onBack: (() -> Void)? = nil, onNext: @escaping () -> Void) {
+        self._value = value
+        self.onBack = onBack
+        self.onNext = onNext
+        
+        self.title = title
+        self.subtitle = subtitle
+        self.unit = unit
+    }
 
     private let maxValue = 999   // three digits is plenty for cm and kg
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            NavHeader(onBack: onBack)
-
-            ScreenTitle(title: title, subtitle: subtitle)
-                .padding(.top, 20)
-
-            display
-                .padding(.horizontal, 24)
-                .padding(.top, 30)
-
-            Spacer(minLength: 20)
-
-            keypad
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        PageWrapper(
+            title: title,
+            content: {
+                VStack(alignment: .leading, spacing: 0) {
+                    Subtitle(subtitle)
+                    
+                    display
+                        .padding(.top, 24)
+                    
+                    Spacer(minLength: 20)
+                    
+                    keypad
+                }
+            },
+            scrollable: false,
+            onBack: onBack
+        )
     }
 
     // MARK: Big number + units
@@ -49,6 +60,7 @@ struct NumericPadScreen: View {
                         .foregroundStyle(i < greyCount ? Theme.faint : Theme.ink)
                 }
             }
+            .monospaced(true)
             .font(.system(size: 68, weight: .bold, design: .rounded))
             .animation(.snappy(duration: 0.15), value: value)
 

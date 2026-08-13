@@ -2,22 +2,28 @@
 //
 //  ══════════════════════ EXERCISE FEATURE — ENTRY POINT ══════════════════════
 //  One configurable MediaPipe exercise session, used in two places:
-//    • Screening exercise test → fixedMode: .sitToStand, allowSkip: true
+//    • Screening exercise test → fixedMode + allowSkip: true (driven by ContentView)
 //    • Tracker                 → fixedMode + intensity from the prescribed plan
 //
+//  Layout follows the scan flow (see PoseCaptureView): the camera lives inside a
+//  rounded rectangle frame, with the live status/instructions BELOW it (position
+//  prompt → countdown → timer ring + rep count → result), all inside PageWrapper.
+//
 //  Config:
-//    fixedMode  — lock to one movement (nil shows the free 3-way picker)
+//    fixedMode  — lock to one movement (nil shows counter's default)
 //    intensity  — 0…1, passed to RepCounter (lower = less ROM needed per rep)
 //    allowSkip  — show a "can't do this" button (screening)
 //    showInstructions — play the how-to pre-roll first (default true; off for the Lab)
+//    stepIndex/totalSteps — progress dots for the 3-exercise screening test
+//    nextExerciseName — label the "continue" button on the result
 //    onFinish(reps?) — reps done, or nil if skipped / closed
 //
 //  Everything under Features/Exercise/ is the exercise maintainer's; keep this
-//  entry (`ExerciseView(...)` + `onFinish`) stable. Depends on MediaPipe (build
-//  via the .xcworkspace after `pod install`).
+//  entry (`ExerciseView(...)` + `onFinish`) stable. Depends on MediaPipe.
 //  ═════════════════════════════════════════════════════════════════════════════
 
 import SwiftUI
+import UIKit
 
 struct ExerciseView: View {
     var fixedMode: ExerciseMode? = nil
@@ -28,24 +34,26 @@ struct ExerciseView: View {
     var stepIndex: Int? = nil
     var totalSteps: Int? = nil
     var nextExerciseName: String? = nil
+    var onBack: (() -> Void)? = nil
     let onFinish: (_ reps: Int?) -> Void
 
     @StateObject private var viewModel = PoseViewModel()
     @StateObject private var counter = RepCounter()
     @State private var inCamera = false        // false → showing the how-to pre-roll
+    @State private var cameraBlurred = false   // blur the frame once finished
 
-    /// Apakah sheet hasil sedang ditampilkan
-    @State private var showResultSheet = false
-    /// Apakah kamera perlu di-blur (setelah finished)
-    @State private var cameraBlurred = false
+    private let VPW = UIScreen.main.bounds.size.width
 
     var body: some View {
         if showInstructionScreen {
             ExerciseInstructionView(
                 mode: fixedMode ?? counter.mode,
                 allowSkip: allowSkip,
+                stepIndex: stepIndex,
+                totalSteps: totalSteps,
                 onStart: { inCamera = true },
-                onSkip: { finish(nil) }
+                onSkip: { finish(nil) },
+                onBack: onBack            // back on the pre-roll → previous exercise
             )
         } else {
             cameraBody
@@ -58,28 +66,62 @@ struct ExerciseView: View {
         showInstructions && fixedMode != nil && !inCamera
     }
 
-    private var cameraBody: some View {
-        ZStack {
-            // ── Layer 1: Camera feed ──────────────────────────────────────
-            ExerciseCameraPreview(session: viewModel.cameraManager.session)
-                .ignoresSafeArea()
-                .blur(radius: cameraBlurred ? 20 : 0)
-
-            // ── Layer 2: Skeleton overlay (hidden when finished) ──────────
-            if !cameraBlurred {
-                PoseOverlayView(landmarks: viewModel.landmarks, imageSize: viewModel.imageSize)
-                    .ignoresSafeArea()
-            }
-
-            // ── Layer 3: UI controls (z di atas kamera) ──────────────────
-            VStack(spacing: 0) {
-                topBar
-                Spacer()
-                centerContent
-                Spacer()
-                bottomControls
+    // Back from the camera returns to THIS exercise's pre-roll (resetting the
+    // session), when there is one; otherwise it pops out to the caller (e.g. the
+    // Lab has no pre-roll).
+    private var cameraBackAction: (() -> Void)? {
+        if showInstructions && fixedMode != nil {
+            return {
+                counter.stopSession()
+                cameraBlurred = false
+                inCamera = false
             }
         }
+        return onBack
+    }
+
+    // MARK: - Camera screen (framed, PoseCaptureView-style)
+
+    private var cameraBody: some View {
+        PageWrapper(
+            title: headline ?? counter.mode.rawValue,
+            content: {
+                VStack(spacing: 24) {
+                    // Progress dots (only within the 3-exercise test).
+                    if let stepIndex, let totalSteps {
+                        HStack(spacing: 8) {
+                            ForEach(0..<totalSteps, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(i <= stepIndex ? Theme.accent : Theme.faint)
+                                    .frame(height: 6)
+                            }
+                        }
+                    }
+
+                    ZStack {
+                        cameraFrame
+                        
+                        VStack(spacing: 0) {
+                            Spacer()
+                            if case .running = counter.session {
+                                timerRing
+                            } else if case .finished = counter.session {
+                                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                                    finish(counter.repCount)
+                                }
+                            } else {
+                                EmptyView()
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 24)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            },
+            scrollable: false,
+            onBack: cameraBackAction   // back on the camera → this exercise's pre-roll
+        )
         .onAppear {
             if let fixedMode { counter.mode = fixedMode }
             counter.intensity = intensity
@@ -91,305 +133,151 @@ struct ExerciseView: View {
             if case .finished = newState {
                 cameraBlurred = true
                 viewModel.stop()
-                // Sedikit delay agar animasi blur selesai sebelum sheet muncul
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    showResultSheet = true
-                }
             }
-        }
-        .sheet(isPresented: $showResultSheet, onDismiss: {
-            finish(counter.repCount)
-        }) {
-            ResultSheetView(
-                exerciseName: counter.mode.rawValue,
-                duration: 30,
-                repCount: counter.repCount,
-                nextExerciseName: nextExerciseName
-            )
         }
         .animation(.easeInOut(duration: 0.3), value: cameraBlurred)
     }
 
-    // MARK: - Top Bar (bentuk sudut iPhone, menutupi Dynamic Island)
+    // MARK: Camera frame (camera + skeleton overlay, both aspect-fill into the frame)
 
-    private var topBar: some View {
-        VStack(spacing: 0) {
-            // Area yang menutupi Dynamic Island / notch
-            Color.white
-                .frame(height: 0) // Tinggi diatur oleh safe area padding
+    private var cameraFrame: some View {
+        ZStack {
+            ExerciseCameraPreview(session: viewModel.cameraManager.session)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .blur(radius: cameraBlurred ? 18 : 0)
 
-            VStack(alignment: .leading, spacing: 12) {
-                // Stepper indicator (jika berada dalam rangkaian tes)
-                if let stepIndex = stepIndex, let totalSteps = totalSteps {
-                    HStack(spacing: 8) {
-                        ForEach(0..<totalSteps, id: \.self) { i in
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(i <= stepIndex ? Theme.accent : Theme.faint)
-                                .frame(height: 6)
-                        }
-                    }
-                }
-
-                HStack {
-                    // Nama exercise / headline
-                    Text(headline ?? counter.mode.rawValue)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(Theme.ink)
-
-                    Spacer()
-
-                    if allowSkip {
-                        Button {
-                            finish(nil)
-                        } label: {
-                            Text("Skip")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(20)
-                        }
-                    }
-                }
+            if !cameraBlurred {
+                PoseOverlayView(landmarks: viewModel.landmarks, imageSize: viewModel.imageSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(
-                Color.white
-                    .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
-                    .edgesIgnoringSafeArea(.top)
-            )
+
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(frameBorderColor, lineWidth: 3)
+                .animation(.easeInOut(duration: 0.2), value: counter.session)
+                .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
+        }
+        .frame(width: VPW - 48)
+        .frame(maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        // Tap-to-start fallback (the counter also auto-starts on a steady posture).
+        .onTapGesture {
+            if case .idle = counter.session { counter.startSession() }
         }
     }
 
-    // MARK: - Center Content (countdown besar di tengah layar)
+    private var frameBorderColor: Color {
+        switch counter.session {
+        case .running, .finished: return .green
+        case .countdown:          return .yellow
+        case .idle:               return counter.isPostureStabilizing ? .green : Color.white.opacity(0.9)
+        }
+    }
+
+    // MARK: Status below the frame (the "instructions")
 
     @ViewBuilder
-    private var centerContent: some View {
+    private var statusBelow: some View {
         switch counter.session {
         case .idle:
-            positionPromptCard
+            positionPrompt
 
         case .countdown(let s):
-            // Angka countdown besar di tengah layar
-            Text("\(s)")
-                .font(.system(size: 140, weight: .bold, design: .rounded))
-                .foregroundColor(.yellow)
-                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-                .transition(.scale(scale: 1.3).combined(with: .opacity))
-                .id("countdown-\(s)")
-                .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
+            VStack(spacing: 4) {
+                Text("\(s)")
+                    .font(.system(size: 68, weight: .bold, design: .rounded))
+                    .foregroundStyle(.yellow)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
+                Text("Bersiap…")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.muted)
+            }
 
-            Text("Bersiap…")
-                .font(.system(size: 20, weight: .medium))
-                .foregroundColor(.white.opacity(0.9))
-                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-
-        default:
-            EmptyView()
-        }
-    }
-
-    // MARK: - Bottom Controls
-
-    @ViewBuilder
-    private var bottomControls: some View {
-        switch counter.session {
-        case .idle, .countdown:
-            // Otomatis mulai dari deteksi posisi — tidak ada tombol manual
-            EmptyView()
-
-        case .running(let s):
-            timerCircle(remaining: s)
-                .padding(.bottom, 60)
+        case .running:
+            timerRing
 
         case .finished:
-            EmptyView()
+            VStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 44)).foregroundStyle(.green)
+                Text("Selesai! \(counter.repCount) repetisi")
+                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.ink)
+            }
         }
     }
 
-    // MARK: - Kartu Petunjuk Posisi (Auto Start)
-
-    private var positionPromptCard: some View {
-        let isStabilizing = counter.isPostureStabilizing
-
-        return VStack(spacing: 10) {
-            Image(systemName: isStabilizing ? "checkmark.circle.fill" : (counter.mode == .sitToStand ? "figure.seat.row.left" : "figure.stand"))
-                .font(.system(size: 40))
-                .foregroundColor(isStabilizing ? .green : .yellow)
-                .scaleEffect(isStabilizing ? 1.15 : 1.0)
-                .animation(.spring(response: 0.3), value: isStabilizing)
-
-            Text(isStabilizing ? "Posisi Terdeteksi!" : (counter.mode == .sitToStand ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
-
-            Text(isStabilizing ? "Tahan posisi" : (counter.mode == .sitToStand ? "Ambil posisi duduk di kursi untuk mulai otomatis" : "Berdiri tegak menghadap samping untuk mulai otomatis"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.85))
+    private var positionPrompt: some View {
+        let stabilizing = counter.isPostureStabilizing
+        let sit = counter.mode == .sitToStand
+        return VStack(spacing: 8) {
+            Text(stabilizing ? "Posisi Terdeteksi!" : (sit ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(Theme.ink)
+            Text(stabilizing
+                 ? "Tahan posisi — latihan mulai otomatis"
+                 : (sit ? "Ambil posisi duduk di kursi untuk mulai otomatis"
+                        : "Berdiri tegak menghadap samping untuk mulai otomatis"))
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.black.opacity(0.65))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(isStabilizing ? Color.green.opacity(0.8) : Color.yellow.opacity(0.6), lineWidth: 1.5)
-                )
-        )
-        .padding(.horizontal, 30)
-        .shadow(color: .black.opacity(0.35), radius: 10, y: 5)
-        .animation(.easeInOut(duration: 0.2), value: isStabilizing)
-        .onTapGesture {
-            counter.startSession()
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
         }
     }
 
-    // MARK: - Timer Circle (running state)
-
-    private func timerCircle(remaining: Int) -> some View {
+    private var timerRing: some View {
         let progress = counter.elapsedFraction
-        let timerColor = timerStrokeColor(progress: progress)
-
         return ZStack {
-            // Background ring (track)
             Circle()
-                .stroke(Color.gray.opacity(0.2), lineWidth: 18)
-                .frame(width: 150, height: 150)
-
-            // Animated progress ring
+                .fill(.white)
+                .frame(width: 90, height: 90)
+                .overlay(
+                    Text("\(counter.repCount)")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                )
+            
+            Circle()
+                .stroke(Theme.faint.opacity(0.5), lineWidth: 14)
+                .frame(width: 118, height: 118)
             Circle()
                 .trim(from: 0, to: CGFloat(progress))
-                .stroke(timerColor, style: StrokeStyle(lineWidth: 18, lineCap: .butt))
-                .frame(width: 150, height: 150)
+                .stroke(timerColor(progress), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .frame(width: 118, height: 118)
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.05), value: progress)
-
-            // White fill circle
-            Circle()
-                .fill(Color.white)
-                .frame(width: 132, height: 132)
-                .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
-
-            // Rep count inside
-            Text("\(counter.repCount)")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundColor(.black)
-
-            // Sisa waktu kecil di bawah angka
-            Text("repetisi")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.gray)
-                .offset(y: 30)
         }
     }
 
-    /// Warna border berdasarkan progress: hijau → kuning → merah
-    private func timerStrokeColor(progress: Double) -> Color {
-        if progress > 0.5 {
-            return .green
-        } else if progress > 0.25 {
-            return .yellow
-        } else {
-            return .red
+    private func timerColor(_ progress: Double) -> Color {
+        if progress > 0.5 { return .green }
+        if progress > 0.25 { return .yellow }
+        return .red
+    }
+
+    // MARK: Bottom action (continue when finished; skip otherwise)
+
+    @ViewBuilder
+    private var bottomAction: some View {
+        switch counter.session {
+        case .finished:
+            PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                finish(counter.repCount)
+            }
+        default:
+            if allowSkip {
+                Button { finish(nil) } label: {
+                    Text("Saya tidak bisa melakukannya")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                        .underline()
+                }
+            }
         }
     }
 
     private func finish(_ reps: Int?) {
         viewModel.stop()
         onFinish(reps)
-    }
-}
-
-// MARK: - Result Sheet
-
-struct ResultSheetView: View {
-    let exerciseName: String
-    let duration: Int
-    let repCount: Int
-    var nextExerciseName: String? = nil
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 24) {
-            // Handle bar
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.gray.opacity(0.4))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-
-            // Title
-            Text("Hasil Latihan")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(Theme.ink)
-
-            // Results cards
-            VStack(spacing: 12) {
-                resultRow(icon: "figure.strengthtraining.traditional",
-                          label: "Jenis Latihan",
-                          value: exerciseName)
-
-                resultRow(icon: "clock.fill",
-                          label: "Durasi",
-                          value: "\(duration) detik")
-
-                resultRow(icon: "repeat",
-                          label: "Repetisi",
-                          value: "\(repCount) kali",
-                          valueColor: Theme.ink)
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            // Tombol selesai
-            Button {
-                dismiss()
-            } label: {
-                Text(nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Theme.card)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Theme.accent)
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
-        }
-        .padding(.vertical, 16)
-        .background(Theme.bg.ignoresSafeArea())
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden)
-        .interactiveDismissDisabled(false)
-    }
-
-    private func resultRow(icon: String, label: String, value: String,
-                           valueColor: Color? = nil) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 22))
-                .foregroundColor(Theme.accent)
-                .frame(width: 36, height: 36)
-                .background(Theme.accentSoft, in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundColor(Theme.muted)
-                Text(value)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(valueColor ?? Theme.ink)
-            }
-
-            Spacer()
-        }
-        .padding(14)
-        .background(Theme.card)
-        .cornerRadius(12)
     }
 }

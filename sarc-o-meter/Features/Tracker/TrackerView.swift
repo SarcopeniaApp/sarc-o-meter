@@ -18,12 +18,11 @@ struct TrackerView: View {
     @State private var doneReps: [WorkoutKind: Int] = [:]     // exercise → reps logged today
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Latihan Anda")
-
-            ScrollView {
-                VStack(spacing: 16) {
-                    header
+        PageWrapper(
+            title: "Latihan Anda",
+            content: {
+                VStack(spacing: 24) {
+                    Subtitle("Disesuaikan dari hasil skrining Anda. Lakukan dengan nyaman, kualitas gerakan lebih penting daripada jumlah.")
                     if !record.analysis.isEmpty { analysisCard }
                     if let schedule = record.weeklySchedule, !schedule.isEmpty {
                         weeklyScheduleCard(schedule)
@@ -32,16 +31,11 @@ struct TrackerView: View {
                         prescriptionCard(presc)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
+            },
+            footer: {
+                SecondaryButton(title: "Ulangi skrining", action: onRestartScreening)
             }
-
-            SecondaryButton(title: "Ulangi skrining", action: onRestartScreening)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        )
         .fullScreenCover(item: $active) { item in
             ExerciseView(
                 fixedMode: ExerciseMode(rawValue: item.kind.rawValue) ?? .sitToStand,
@@ -52,19 +46,6 @@ struct TrackerView: View {
                 active = nil
             }
         }
-    }
-
-    // MARK: Header
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Rencana latihan Anda")
-                .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.ink)
-            Text("Disesuaikan dari hasil skrining Anda. Lakukan dengan nyaman, kualitas gerakan lebih penting daripada jumlah.")
-                .font(.system(size: 14)).foregroundStyle(Theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var analysisCard: some View {
@@ -96,7 +77,6 @@ struct TrackerView: View {
     }
 
     // MARK: Prescription card
-
     private func prescriptionCard(_ item: Workout) -> some View {
         let dailyTarget = item.repsPerSet * item.setsPerDay
         let done = doneReps[item.kind] ?? 0

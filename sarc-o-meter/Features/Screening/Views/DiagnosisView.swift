@@ -16,11 +16,10 @@ struct DiagnosisView: View {
     let onFinish: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Hasil Skrining")
-
-            ScrollView {
-                VStack(spacing: 16) {
+        PageWrapper(
+            title: "Hasil Screening",
+            content: {
+                VStack(spacing: 24) {
                     riskCard
                     statusCard
                     if !result.redFlags.isEmpty {
@@ -37,16 +36,11 @@ struct DiagnosisView: View {
                     }
                     disclaimer
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 8)
+            },
+            footer: {
+                PrimaryButton(title: "Mulai latihan", enabled: !isGenerating, action: onFinish)
             }
-
-            PrimaryButton(title: "Mulai latihan", enabled: !isGenerating, action: onFinish)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        )
     }
 
     // MARK: Rule-engine summary
