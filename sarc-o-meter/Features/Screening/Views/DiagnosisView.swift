@@ -275,9 +275,9 @@ struct DiagnosisView: View {
     private var riskLabel: String {
         switch result.overallRisk {
         case .low:        return "Risiko Rendah"
-        case .mid:        return "Risiko Menengah (Kemungkinan Sarkopenia)"
-        case .high:       return "Risiko Tinggi (Sarkopenia Terkonfirmasi)"
-        case .severe:     return "Risiko Berat (Sarkopenia + Performa Rendah)"
+        case .mid:        return "Risiko Menengah"
+        case .high:       return "Risiko Tinggi"
+        case .severe:     return "Risiko Berat"
         case .unassessed: return "Belum Dinilai (Data Kurang)"
         }
     }

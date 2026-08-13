@@ -110,24 +110,26 @@ struct ScreeningFlowView: View {
                 maxChunks: 3
             )
             let raw = await llm.sendMessage(prompt) ?? ""
-            
-            // If mobility-only restriction, always use deterministic plan
-            if result.workoutRestriction == .mobilityOnly {
-                plan = ExercisePlan.derive(from: result)
-                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
-            }
 
             if let parsed = OnDeviceRAG.parse(raw) {
                 analysisText = parsed.analysis
                 plan = parsed.plan
                 weeklySchedule = parsed.weeklySchedule
             } else {
-                // Model didn't return usable JSON → show whatever text came back
-                // (if any) and fall back to the deterministic plan.
-                analysisText = raw.isEmpty ? nil : raw
+                // Model didn't return usable JSON → try to extract just the
+                // insight text; fall back to the deterministic plan.
+                analysisText = OnDeviceRAG.extractInsight(from: raw)
                 plan = ExercisePlan.derive(from: result)
                 weeklySchedule = ExercisePlan.weeklySchedule(for: result)
             }
+
+            // Safety override: mobility-only restriction or severe risk always
+            // forces the deterministic single-exercise plan, regardless of LLM output.
+            if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
+                plan = ExercisePlan.derive(from: result)
+                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            }
+
             isGenerating = false
         }
     }

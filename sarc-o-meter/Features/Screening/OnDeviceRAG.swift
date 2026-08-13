@@ -103,9 +103,12 @@ enum OnDeviceRAG {
     keselamatan spesifik","progressionTip":"Cara meningkatkan intensitas bertahap"}],\
     "weeklySchedule":"Jadwal mingguan"}
 
-    PENTING: Array "exercises" HARUS berisi tepat 3 objek, satu untuk setiap latihan \
-    (Sit to Stand, Step Up, Calf Raise). Setiap latihan harus dipersonalisasi \
-    berdasarkan kondisi pengguna.
+    PENTING: Jumlah latihan dalam array "exercises" tergantung kondisi pengguna:
+    - Jika ada "Pembatasan latihan: hanya gerakan ringan", array HANYA berisi 1 objek \
+    (Calf Raise saja).
+    - Jika risiko "Berat" (severe), array berisi 1 objek (Calf Raise saja) karena \
+    pengguna perlu memulai dari gerakan paling dasar dan aman.
+    - Untuk risiko lainnya, array berisi tepat 3 objek (Sit to Stand, Step Up, Calf Raise).
     """
 
     /// Builds the grounded prompt: the user's real result summary, the deterministic
@@ -130,6 +133,23 @@ enum OnDeviceRAG {
         if let h = user.height, let w = user.weight, h > 0 {
             let hm = h / 100.0
             bmi = (w / (hm * hm)).rounded(toPlaces: 1)
+        }
+
+        // Tailor the final instruction based on severity.
+        let exerciseInstruction: String
+        if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
+            exerciseInstruction = """
+            Buat output sesuai format JSON yang ditentukan di instruksi sistem. Karena \
+            pengguna memiliki keterbatasan dan/atau risiko berat, array "exercises" HANYA \
+            berisi 1 latihan: Calf Raise dengan intensitas sangat rendah, berpegangan \
+            pada dinding/kursi. JANGAN masukkan Sit to Stand atau Step Up.
+            """
+        } else {
+            exerciseInstruction = """
+            Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua \
+            3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan \
+            parameter yang dipersonalisasi untuk pengguna ini.
+            """
         }
 
         return """
@@ -162,9 +182,7 @@ enum OnDeviceRAG {
         latihan dan menentukan safety threshold):
         \(references)
 
-        Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua \
-        3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan \
-        parameter yang dipersonalisasi untuk pengguna ini.
+        \(exerciseInstruction)
         """
     }
 
@@ -199,6 +217,35 @@ enum OnDeviceRAG {
         let analysis = out.insight.trimmingCharacters(in: .whitespacesAndNewlines)
         let schedule = out.weeklySchedule?.trimmingCharacters(in: .whitespacesAndNewlines)
         return (analysis.isEmpty ? "—" : analysis, plan, schedule)
+    }
+
+    /// Best-effort extraction of just the "insight" text from raw LLM output.
+    /// Handles cases where the full JSON can't be decoded (e.g. malformed
+    /// exercises array) but the insight string is still there and readable.
+    /// Returns nil when nothing useful can be salvaged.
+    static func extractInsight(from raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // 1. Try to pull just the "insight" value via partial JSON decode.
+        if let open = trimmed.firstIndex(of: "{"),
+           let close = trimmed.lastIndex(of: "}") {
+            let jsonSlice = String(trimmed[open...close])
+            if let data = jsonSlice.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let insight = obj["insight"] as? String {
+                let clean = insight.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !clean.isEmpty { return clean }
+            }
+        }
+
+        // 2. If the raw text doesn't look like JSON at all, it might be a
+        //    plain-language response — return it directly.
+        if !trimmed.contains("{\"insight") && !trimmed.contains("{\"exercises") {
+            return trimmed
+        }
+
+        return nil
     }
 
     // The model emits `{"exercise":"Sit to Stand", …}`; decode that shape, then

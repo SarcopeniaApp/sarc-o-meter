@@ -22,6 +22,18 @@ enum ExercisePlan {
             )]
         }
 
+        // Severe risk → start with only Calf Raise (the most basic, safest
+        // lower-limb exercise) until a professional can evaluate.
+        if result.overallRisk == .severe {
+            return [Workout(
+                kind: .calfRaise, intensity: 0.5, repsPerSet: 6, setsPerDay: 1,
+                tempo: "Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)",
+                restSeconds: 60,
+                safetyNotes: "WAJIB dengan pendampingan profesional. Lakukan dengan berpegangan pada dinding atau kursi. Hentikan segera jika merasa pusing, nyeri, atau tidak stabil.",
+                progressionTip: "Setelah 2-4 minggu rutin tanpa keluhan, konsultasikan dengan fisioterapis untuk menambah Sit to Stand secara bertahap."
+            )]
+        }
+
         // Scale ROM (intensity), reps, and daily dose to the risk category.
         var intensity: Double
         var reps: Int
