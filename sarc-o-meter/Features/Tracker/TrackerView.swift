@@ -60,7 +60,7 @@ struct TrackerView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Rencana latihan Anda")
                 .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.ink)
-            Text("Disesuaikan dari hasil skrining Anda. Lakukan dengan nyaman — kualitas gerakan lebih penting daripada jumlah.")
+            Text("Disesuaikan dari hasil skrining Anda. Lakukan dengan nyaman, kualitas gerakan lebih penting daripada jumlah.")
                 .font(.system(size: 14)).foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }

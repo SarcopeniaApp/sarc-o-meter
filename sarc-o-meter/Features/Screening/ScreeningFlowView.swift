@@ -111,7 +111,7 @@ struct ScreeningFlowView: View {
             )
             let raw = await llm.sendMessage(prompt) ?? ""
 
-            if let parsed = OnDeviceRAG.parse(raw) {
+            if let parsed = OnDeviceRAG.parse(raw, result: result) {
                 analysisText = parsed.analysis
                 plan = parsed.plan
                 weeklySchedule = parsed.weeklySchedule

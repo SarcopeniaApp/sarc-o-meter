@@ -190,7 +190,7 @@ enum OnDeviceRAG {
     /// Returns nil when the output isn't valid/usable so the caller can fall back to the
     /// deterministic plan. Defensive: strips markdown fences, keeps only the known
     /// exercises, and clamps numbers.
-    static func parse(_ raw: String) -> (analysis: String, plan: [Workout], weeklySchedule: String?)? {
+    static func parse(_ raw: String, result: AssessmentResult) -> (analysis: String, plan: [Workout], weeklySchedule: String?)? {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let open = s.firstIndex(of: "{"), let close = s.lastIndex(of: "}") {
             s = String(s[open...close])
@@ -198,13 +198,15 @@ enum OnDeviceRAG {
         guard let data = s.data(using: .utf8),
               let out = try? JSONDecoder().decode(LLMOutput.self, from: data) else { return nil }
 
+        let prescribedIntensity = ExercisePlan.prescribedIntensity(for: result)
+
         // Keep only the known exercises (WorkoutKind validates the LLM's string)
         // and clamp the numbers.
         let plan = out.exercises.compactMap { w -> Workout? in
             guard let kind = WorkoutKind(rawValue: w.exercise) else { return nil }
             return Workout(
                 kind: kind,
-                intensity: 0.7, // not set by LLM; use a sensible default
+                intensity: prescribedIntensity,
                 repsPerSet: max(1, min(50, w.reps)),
                 setsPerDay: max(1, min(6, w.sets)),
                 tempo: w.tempo,

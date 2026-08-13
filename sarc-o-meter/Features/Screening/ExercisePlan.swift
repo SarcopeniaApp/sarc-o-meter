@@ -10,11 +10,28 @@ import Foundation
 
 enum ExercisePlan {
 
+    static func prescribedIntensity(for result: AssessmentResult) -> Double {
+        if result.workoutRestriction == .mobilityOnly { return 0.4 }
+
+        let baseIntensity: Double
+        switch result.overallRisk {
+        case .low:        baseIntensity = 1.0
+        case .mid:        baseIntensity = 0.75
+        case .high:       baseIntensity = 0.6
+        case .severe:     baseIntensity = 0.5
+        case .unassessed: baseIntensity = 0.6
+        }
+
+        return result.redFlags.isEmpty ? baseIntensity : min(baseIntensity, 0.6)
+    }
+
     static func derive(from result: AssessmentResult) -> [Workout] {
+        let prescribedIntensity = prescribedIntensity(for: result)
+
         // Safety first: mobility/balance-only clearance → one gentle, low-ROM move.
         if result.workoutRestriction == .mobilityOnly {
             return [Workout(
-                kind: .calfRaise, intensity: 0.4, repsPerSet: 8, setsPerDay: 1,
+                kind: .calfRaise, intensity: prescribedIntensity, repsPerSet: 8, setsPerDay: 1,
                 tempo: "Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)",
                 restSeconds: 60,
                 safetyNotes: "Lakukan dengan berpegangan pada dinding atau kursi. Hentikan jika merasa pusing atau nyeri.",
@@ -26,7 +43,7 @@ enum ExercisePlan {
         // lower-limb exercise) until a professional can evaluate.
         if result.overallRisk == .severe {
             return [Workout(
-                kind: .calfRaise, intensity: 0.5, repsPerSet: 6, setsPerDay: 1,
+                kind: .calfRaise, intensity: prescribedIntensity, repsPerSet: 6, setsPerDay: 1,
                 tempo: "Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)",
                 restSeconds: 60,
                 safetyNotes: "WAJIB dengan pendampingan profesional. Lakukan dengan berpegangan pada dinding atau kursi. Hentikan segera jika merasa pusing, nyeri, atau tidak stabil.",
@@ -35,32 +52,31 @@ enum ExercisePlan {
         }
 
         // Scale ROM (intensity), reps, and daily dose to the risk category.
-        var intensity: Double
+        let intensity = prescribedIntensity
         var reps: Int
         var sets: Int
         var restSec: Int
         var tempoDesc: String
         switch result.overallRisk {
         case .low:
-            intensity = 1.0;  reps = 12; sets = 3; restSec = 30
+            reps = 12; sets = 3; restSec = 30
             tempoDesc = "Terkontrol (2 detik naik, 2 detik turun)"
         case .mid:
-            intensity = 0.75; reps = 10; sets = 2; restSec = 30
+            reps = 10; sets = 2; restSec = 30
             tempoDesc = "Lambat dan terkontrol (3 detik naik, 3 detik turun)"
         case .high:
-            intensity = 0.6;  reps = 8;  sets = 2; restSec = 45
+            reps = 8;  sets = 2; restSec = 45
             tempoDesc = "Lambat dan terkontrol (3 detik naik, 3 detik turun)"
         case .severe:
-            intensity = 0.5;  reps = 6;  sets = 1; restSec = 60
+            reps = 6;  sets = 1; restSec = 60
             tempoDesc = "Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)"
         case .unassessed:
-            intensity = 0.6;  reps = 8;  sets = 2; restSec = 30
+            reps = 8;  sets = 2; restSec = 30
             tempoDesc = "Lambat dan terkontrol (3 detik naik, 3 detik turun)"
         }
 
         // Any safety flag → prescribe more gently.
         if !result.redFlags.isEmpty {
-            intensity = min(intensity, 0.6)
             reps = min(reps, 8)
             sets = min(sets, 2)
             restSec = max(restSec, 45)
