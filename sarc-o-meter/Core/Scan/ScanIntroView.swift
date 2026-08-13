@@ -17,29 +17,20 @@ struct ScanIntroView: View {
     let onManual: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(onBack: onBack)
-
-            ScreenTitle(
-                title: "Pindai Tubuh",
-                subtitle: "Kenakan pakaian ketat (atau pakaian dalam yang pas) agar siluet tubuh terlihat jelas, dan berdirilah di depan dinding polos dengan pencahayaan baik. Foto Anda tetap di perangkat — kami tidak akan membagikan privasi Anda ;)"
-            )
-            .padding(.top, 20)
-
-            illustration
-                .padding(.horizontal, 20)
-                .padding(.top, 28)
-
-            Spacer()
-
-            VStack(spacing: 12) {
-                PrimaryButton(title: "Mulai memindai", action: onBeginScan)
-                SecondaryButton(title: "Masukkan ukuran manual", action: onManual)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        PageWrapper(
+            title: "Pindai Tubuh",
+            content: {
+                VStack(alignment: .leading, spacing: 24) {
+                    Subtitle("Kenakan pakaian ketat agar silhouette tubuh terlihat jelas, dan berdirilah di depan dinding polos dengan pencahayaan baik.")
+                    illustration
+                    SecondaryButton(title: "Masukkan ukuran manual", action: onManual)
+                }
+            },
+            footer: {
+                PrimaryButton(title: "Mulai scan", action: onBeginScan)
+            },
+            onBack: onBack
+        )
     }
 
     private var illustration: some View {

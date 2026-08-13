@@ -15,16 +15,15 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
-
     private enum Step {
-        case gender, age, height, weight, instructions, manual, measuring, result, screening
+        case greeting, gender, age, height, weight, instructions, manual, measuring, result, screening
     }
 
     // The single source of truth. Loaded once; a saved user whose screening is
     // filled in means "returning user → show the tracker".
     @State private var user: User = UserStore.load() ?? User()
 
-    @State private var step: Step = .gender
+    @State private var step: Step = .greeting
     @State private var errorText: String?
     @State private var showCapture = false
 
@@ -77,21 +76,29 @@ struct ContentView: View {
     @ViewBuilder
     private var content: some View {
         switch step {
+        case .greeting:
+            GreetingScreen() {
+                step = .gender
+            }
         case .gender:
-            GenderScreen(user: user, debugServer: $debugServer) {
+            GenderScreen(
+                user: user,
+                debugServer: $debugServer,
+                onBack: { step = .greeting }
+            ) {
                 step = .age
             }
-
         case .age:
             NumericPadScreen(
                 title: "Tentang Anda",
-                subtitle: "Berapa usia Anda? Usia membantu kami menyesuaikan skrining.",
-                unit: "tahun", value: ageBinding,
+                subtitle: "Berapa usia Anda?",
+                unit: "th", value: ageBinding,
                 onBack: { step = .gender }
             ) { step = .height }
 
         case .height:
             NumericPadScreen(
+                title: "Tentang Anda",
                 subtitle: "Berapa tinggi badan Anda?",
                 unit: "cm", value: heightBinding,
                 onBack: { step = .age }
@@ -99,7 +106,8 @@ struct ContentView: View {
 
         case .weight:
             NumericPadScreen(
-                subtitle: "Bagus — sekarang, berapa berat badan Anda?",
+                title: "Tentang Anda",
+                subtitle: "Berapa berat badan Anda?",
                 unit: "kg", value: weightBinding,
                 onBack: { step = .height }
             ) { step = .instructions }

@@ -13,29 +13,21 @@ struct ResultScreen: View {
     let onFinish: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader()
-
-            ScreenTitle(
-                title: "Hasil Pindai Tubuh",
-                subtitle: "Berhasil! Ini hasil pindaian Anda. Jika ada yang kurang tepat, silakan pindai ulang kapan saja."
-            )
-            .padding(.top, 20)
-
-            card
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-
-            Spacer()
-
-            HStack(spacing: 14) {
-                SecondaryButton(title: "Pindai ulang", action: onRescan)
-                PrimaryButton(title: "Lanjut", action: onFinish)
+        PageWrapper(
+            title: "Hasil Scan Tubuh",
+            content: {
+                VStack(alignment: .leading, spacing: 24) {
+                    Subtitle("Berhasil! Di bawah ini adalah hasil scanning tubuh Anda. Jika dirasa ada yang kurang tepat, silahkan pindai ulang kapan saja.")
+                    card
+                }
+            },
+            footer: {
+                HStack(spacing: 14) {
+                    SecondaryButton(title: "Pindai ulang", action: onRescan)
+                    PrimaryButton(title: "Lanjut", action: onFinish)
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        )
     }
 
     // MARK: Result card
@@ -68,7 +60,7 @@ struct ResultScreen: View {
 
             Spacer(minLength: 0)
         }
-        .padding(22)
+        .padding(24)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
         .shadow(color: Theme.cardShadow, radius: 14, y: 8)
     }

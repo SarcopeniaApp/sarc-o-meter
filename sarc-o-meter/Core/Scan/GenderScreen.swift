@@ -10,33 +10,25 @@ import SwiftUI
 struct GenderScreen: View {
     let user: User
     @Binding var debugServer: String
+    var onBack: (() -> Void)? = nil
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader()
+        PageWrapper(
+            title: "Tentang Anda",
+            content: {
+                VStack(alignment: .leading, spacing: 24) {
+                    Subtitle("Apa jenis kelamin Anda saat lahir?")
 
-            ScreenTitle(
-                title: "Pindai Tubuh",
-                subtitle: "Pertama, mana yang paling menggambarkan Anda? Ini membantu kami menyesuaikan hasil pengukuran."
-            )
-            .padding(.top, 20)
-
-            VStack(spacing: 14) {
-                genderRow(.female, glyph: "\u{2640}", label: "Saya lahir sebagai perempuan")  // ♀
-                genderRow(.male,   glyph: "\u{2642}", label: "Saya lahir sebagai laki-laki")    // ♂
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 28)
-
-            Spacer()
-
-            serverField(icon: "ladybug", placeholder: "Server debug (opsional) — http://<ip-mac>:8000",
-                        text: $debugServer)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 16)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+                    VStack(spacing: 14) {
+                        genderRow(.female, glyph: "\u{2640}", label: "Saya terlahir perempuan") // ♀
+                        genderRow(.male,   glyph: "\u{2642}", label: "Saya terlahir laki-laki") // ♂
+                    }
+                    serverField(icon: "ladybug", placeholder: "Server debug (opsional) — http://<ip-mac>:8000", text: $debugServer)
+                }
+            },
+            onBack: onBack
+        )
     }
 
     private func serverField(icon: String, placeholder: String, text: Binding<String>) -> some View {
