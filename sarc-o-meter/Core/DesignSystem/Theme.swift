@@ -314,8 +314,7 @@ struct PageWrapper<Content: View, Footer: View>: View {
                     .background(
                         ZStack(alignment: .topLeading) {
                             Rectangle()
-                                .fill(Theme.card)
-                                .opacity(scrollState.0)
+                                .fill(Theme.bg)
                         }
                         .ignoresSafeArea()
                     )

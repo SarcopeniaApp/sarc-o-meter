@@ -12,16 +12,30 @@ import SwiftUI
 struct ExerciseInstructionView: View {
     let mode: ExerciseMode
     var allowSkip: Bool = false
+    var stepIndex: Int? = nil
+    var totalSteps: Int? = nil
     let onStart: () -> Void
     let onSkip: () -> Void
-    
+    var onBack: (() -> Void)? = nil
+
     private let VPW = UIScreen.main.bounds.size.width
 
     var body: some View {
         PageWrapper(
-            title: "Panduan Latihan",
+            title: mode.displayName,
             content: {
                 VStack(spacing: 24) {
+                    // Progress dots (only within the 3-exercise test).
+                    if let stepIndex, let totalSteps {
+                        HStack(spacing: 8) {
+                            ForEach(0..<totalSteps, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(i <= stepIndex ? Theme.accent : Theme.faint)
+                                    .frame(height: 6)
+                            }
+                        }
+                    }
+                    
                     ZStack {
                         if let url = mode.instructionVideoURL {
                             LoopingVideoPlayer(url: url)
@@ -37,12 +51,12 @@ struct ExerciseInstructionView: View {
                             }
                         }
                     }
-                    .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
+                    .frame(width: VPW - 48, height: (VPW - 48))
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .shadow(color: Theme.cardShadow, radius: 10, y: 6)
                     
                     VStack(spacing: 8) {
-                        Text(mode.displayName)
+                        Text("Panduan Latihan")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(Theme.ink)
                         Text(mode.instructionText)
@@ -51,14 +65,16 @@ struct ExerciseInstructionView: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    
-                    Spacer(minLength: 0)
-                    
-                    PrimaryButton(title: "Mulai", action: onStart)
                 }
                 .frame(maxWidth: .infinity)
             },
-            scrollable: false
+            footer: {
+                HStack(spacing: 14) {
+                    SecondaryButton(title: "Lewati", action: onSkip)
+                    PrimaryButton(title: "Mulai", action: onStart)
+                }
+            },
+            onBack: onBack
         )
     }
 }
@@ -68,20 +84,20 @@ struct ExerciseInstructionView: View {
 extension ExerciseMode {
     var displayName: String {
         switch self {
-        case .sitToStand: return "Berdiri dari Kursi"
-        case .stepUp:     return "Naik Step"
-        case .calfRaise:  return "Jinjit (Angkat Tumit)"
+        case .sitToStand: return "Sit to Stand"
+        case .stepUp:     return "Step Up"
+        case .calfRaise:  return "Calf Raises"
         }
     }
 
     var instructionText: String {
         switch self {
         case .sitToStand:
-            return "Duduk di kursi yang kokoh, lalu berdiri tanpa bantuan tangan dan duduk kembali. Ulangi dengan gerakan yang nyaman."
+            return "Duduk di kursi yang kokoh, lalu berdiri tanpa bantuan tangan dan duduk kembali. Ulangi dengan gerakan yang nyaman. Pilih lewati apabila tidak bisa."
         case .stepUp:
-            return "Naik ke atas step atau anak tangga dengan satu kaki, lalu turun. Bergantian kaki sambil menjaga keseimbangan."
+            return "Naik ke atas step atau anak tangga dengan satu kaki, lalu turun. Bergantian kaki sambil menjaga keseimbangan. Pilih lewati apabila tidak bisa."
         case .calfRaise:
-            return "Berdiri tegak (boleh berpegangan), angkat kedua tumit hingga berjinjit, lalu turunkan perlahan."
+            return "Berdiri tegak (boleh berpegangan), angkat kedua tumit hingga berjinjit, lalu turunkan perlahan. Pilih lewati apabila tidak bisa."
         }
     }
 

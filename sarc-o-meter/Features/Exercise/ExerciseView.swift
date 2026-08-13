@@ -34,6 +34,7 @@ struct ExerciseView: View {
     var stepIndex: Int? = nil
     var totalSteps: Int? = nil
     var nextExerciseName: String? = nil
+    var onBack: (() -> Void)? = nil
     let onFinish: (_ reps: Int?) -> Void
 
     @StateObject private var viewModel = PoseViewModel()
@@ -48,8 +49,11 @@ struct ExerciseView: View {
             ExerciseInstructionView(
                 mode: fixedMode ?? counter.mode,
                 allowSkip: allowSkip,
+                stepIndex: stepIndex,
+                totalSteps: totalSteps,
                 onStart: { inCamera = true },
-                onSkip: { finish(nil) }
+                onSkip: { finish(nil) },
+                onBack: onBack            // back on the pre-roll → previous exercise
             )
         } else {
             cameraBody
@@ -60,6 +64,20 @@ struct ExerciseView: View {
     // (fixedMode == nil) and any caller that opts out go straight to the camera.
     private var showInstructionScreen: Bool {
         showInstructions && fixedMode != nil && !inCamera
+    }
+
+    // Back from the camera returns to THIS exercise's pre-roll (resetting the
+    // session), when there is one; otherwise it pops out to the caller (e.g. the
+    // Lab has no pre-roll).
+    private var cameraBackAction: (() -> Void)? {
+        if showInstructions && fixedMode != nil {
+            return {
+                counter.stopSession()
+                cameraBlurred = false
+                inCamera = false
+            }
+        }
+        return onBack
     }
 
     // MARK: - Camera screen (framed, PoseCaptureView-style)
@@ -80,17 +98,29 @@ struct ExerciseView: View {
                         }
                     }
 
-                    cameraFrame
-
-                    statusBelow
-
-                    Spacer(minLength: 8)
-
-                    bottomAction
+                    ZStack {
+                        cameraFrame
+                        
+                        VStack(spacing: 0) {
+                            Spacer()
+                            if case .running = counter.session {
+                                timerRing
+                            } else if case .finished = counter.session {
+                                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                                    finish(counter.repCount)
+                                }
+                            } else {
+                                EmptyView()
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 24)
+                    }
                 }
                 .frame(maxWidth: .infinity)
             },
-            scrollable: false
+            scrollable: false,
+            onBack: cameraBackAction   // back on the camera → this exercise's pre-roll
         )
         .onAppear {
             if let fixedMode { counter.mode = fixedMode }
@@ -126,8 +156,9 @@ struct ExerciseView: View {
                 .animation(.easeInOut(duration: 0.2), value: counter.session)
                 .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
         }
-        .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
-        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .frame(width: VPW - 48)
+        .frame(maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Tap-to-start fallback (the counter also auto-starts on a steady posture).
         .onTapGesture {
             if case .idle = counter.session { counter.startSession() }
@@ -198,6 +229,15 @@ struct ExerciseView: View {
         let progress = counter.elapsedFraction
         return ZStack {
             Circle()
+                .fill(.white)
+                .frame(width: 90, height: 90)
+                .overlay(
+                    Text("\(counter.repCount)")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                )
+            
+            Circle()
                 .stroke(Theme.faint.opacity(0.5), lineWidth: 14)
                 .frame(width: 118, height: 118)
             Circle()
@@ -206,14 +246,6 @@ struct ExerciseView: View {
                 .frame(width: 118, height: 118)
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.05), value: progress)
-            VStack(spacing: 0) {
-                Text("\(counter.repCount)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.ink)
-                Text("repetisi")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.muted)
-            }
         }
     }
 

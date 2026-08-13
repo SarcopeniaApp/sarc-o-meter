@@ -19,15 +19,18 @@ import UIKit
 struct ContentView: View {
     private enum Step {
         case greeting, gender, age, height, weight, instructions, manual, capturing, measuring, result
-        // Screening (formerly ScreeningFlowView, now driven here):
-        case questionnaire, exerciseTest, analysis
+        // Screening (formerly ScreeningFlowView, now driven here). The exercise
+        // test is split into one step per exercise, just like age → height → weight.
+        case questionnaire
+        case exerciseSitToStand, exerciseStepUp, exerciseCalfRaise
+        case analysis
     }
 
     // The single source of truth. Loaded once; a saved user whose screening is
     // filled in means "returning user → show the tracker".
     @State private var user: User = UserStore.load() ?? User()
 
-    @State private var step: Step = .greeting
+    @State private var step: Step = .questionnaire
     @State private var errorText: String?
 
     // Manual-entry sub-flow state (a transient input buffer; committed into `user`).
@@ -37,10 +40,10 @@ struct ContentView: View {
 
     private struct ManualField { let key: String; let name: String; let subtitle: String }
     private static let manualFields: [ManualField] = [
-        ManualField(key: "chest", name: "Dada",     subtitle: "Ukur bagian terlebar dada Anda."),
-        ManualField(key: "waist", name: "Pinggang", subtitle: "Ukur lingkar pinggang alami Anda."),
-        ManualField(key: "hip",   name: "Pinggul",  subtitle: "Ukur bagian terlebar pinggul Anda."),
-        ManualField(key: "calf",  name: "Betis",    subtitle: "Ukur bagian tertebal betis Anda."),
+        ManualField(key: "chest", name: "Lingkard Dada",     subtitle: "Ukur bagian terlebar dada Anda."),
+        ManualField(key: "waist", name: "Linkgar Pinggang", subtitle: "Ukur lingkar pinggang alami Anda."),
+        ManualField(key: "hip",   name: "Lingkar Pinggul",  subtitle: "Ukur bagian terlebar pinggul Anda."),
+        ManualField(key: "calf",  name: "Lingkar Betis",    subtitle: "Ukur bagian tertebal betis Anda."),
     ]
 
     @AppStorage("debugServer") private var debugServer = ""
@@ -48,19 +51,20 @@ struct ContentView: View {
     @State private var llm = LLMManager()
 
     // Screening flow state (moved here from the former ScreeningFlowView).
-    @State private var testIndex = 0
     @State private var ruleResult: AssessmentResult?
     @State private var analysisText: String?
     @State private var plan: [Workout] = []
     @State private var weeklySchedule: String?
     @State private var isGenerating = false
 
-    // The exercise test runs the three exercises in order.
-    private static let testOrder: [(mode: ExerciseMode, name: String)] = [
-        (.sitToStand, "Berdiri dari kursi"),
-        (.stepUp,     "Naik step"),
-        (.calfRaise,  "Jinjit (angkat tumit)"),
-    ]
+    // Indonesian display name per exercise (the screen title + the "next" label).
+    private static func exerciseName(_ mode: ExerciseMode) -> String {
+        switch mode {
+        case .sitToStand: return "Sit to Stand"
+        case .stepUp:     return "Step Up"
+        case .calfRaise:  return "Calf Raises"
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -101,7 +105,7 @@ struct ContentView: View {
             }
         case .age:
             NumericPadScreen(
-                title: "Tentang Anda",
+                title: "Umur",
                 subtitle: "Berapa usia Anda?",
                 unit: "th", value: ageBinding,
                 onBack: { step = .gender }
@@ -109,7 +113,7 @@ struct ContentView: View {
 
         case .height:
             NumericPadScreen(
-                title: "Tentang Anda",
+                title: "Tinggi Badan",
                 subtitle: "Berapa tinggi badan Anda?",
                 unit: "cm", value: heightBinding,
                 onBack: { step = .age }
@@ -117,7 +121,7 @@ struct ContentView: View {
 
         case .weight:
             NumericPadScreen(
-                title: "Tentang Anda",
+                title: "Berat Badan",
                 subtitle: "Berapa berat badan Anda?",
                 unit: "kg", value: weightBinding,
                 onBack: { step = .height }
@@ -154,14 +158,29 @@ struct ContentView: View {
                 onFinish: { step = .questionnaire }
             )
 
-        // ── Screening: questionnaire → exercise test → analysis ──
+        // ── Screening: questionnaire → exercise test (3 steps) → analysis ──
         case .questionnaire:
             ClinicalHistoryView(user: user, onBack: { step = .result }) {
-                step = .exerciseTest
+                step = .exerciseSitToStand
             }
 
-        case .exerciseTest:
-            exerciseTestStep
+        case .exerciseSitToStand:
+            exerciseStep(.sitToStand, index: 0, nextName: Self.exerciseName(.stepUp),
+                         back: { step = .questionnaire }) {
+                step = .exerciseStepUp
+            }
+
+        case .exerciseStepUp:
+            exerciseStep(.stepUp, index: 1, nextName: Self.exerciseName(.calfRaise),
+                         back: { step = .exerciseSitToStand }) {
+                step = .exerciseCalfRaise
+            }
+
+        case .exerciseCalfRaise:
+            exerciseStep(.calfRaise, index: 2, nextName: nil,
+                         back: { step = .exerciseStepUp }) {
+                runAnalysis()
+            }
 
         case .analysis:
             if let ruleResult {
@@ -179,25 +198,27 @@ struct ContentView: View {
 
     // MARK: Screening (questionnaire → 3-exercise test → on-device analysis)
 
+    // One exercise = one step (like age → height → weight). Records the reps, then
+    // runs `advance` (the next exercise, or the analysis after the last one).
     @ViewBuilder
-    private var exerciseTestStep: some View {
-        let item = Self.testOrder[testIndex]
-        let hasNext = testIndex + 1 < Self.testOrder.count
-        let nextName = hasNext ? Self.testOrder[testIndex + 1].name : nil
-
+    private func exerciseStep(_ mode: ExerciseMode, index: Int, nextName: String?,
+                              back: (() -> Void)?, advance: @escaping () -> Void) -> some View {
         // Each exercise is skippable ("can't do it" → nil reps). `.id` gives each a
-        // fresh camera + rep counter so switching exercises starts clean.
+        // fresh camera + rep counter. `back` goes to the previous exercise (from the
+        // pre-roll) or back to this exercise's pre-roll (from the camera).
         ExerciseView(
-            fixedMode: item.mode,
+            fixedMode: mode,
             allowSkip: true,
-            headline: item.name,
-            stepIndex: testIndex,
-            totalSteps: Self.testOrder.count,
-            nextExerciseName: nextName
+            headline: Self.exerciseName(mode),
+            stepIndex: index,
+            totalSteps: 3,
+            nextExerciseName: nextName,
+            onBack: back
         ) { reps in
-            recordTest(item.mode, reps)
+            recordTest(mode, reps)
+            advance()
         }
-        .id(item.mode)
+        .id(mode)
     }
 
     private func recordTest(_ mode: ExerciseMode, _ reps: Int?) {
@@ -205,11 +226,6 @@ struct ContentView: View {
         case .sitToStand: user.sitToStandReps = reps
         case .stepUp:     user.stepUpReps = reps
         case .calfRaise:  user.calfRaiseReps = reps
-        }
-        if testIndex + 1 < Self.testOrder.count {
-            testIndex += 1
-        } else {
-            runAnalysis()
         }
     }
 
@@ -348,7 +364,6 @@ struct ContentView: View {
         manualIndex = 0
         manualEntry = 0
         manualValues = [:]
-        testIndex = 0
         ruleResult = nil
         analysisText = nil
         plan = []
