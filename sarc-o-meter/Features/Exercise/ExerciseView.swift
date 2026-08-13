@@ -24,6 +24,7 @@
 
 import SwiftUI
 import UIKit
+import AVFoundation
 
 struct ExerciseView: View {
     var fixedMode: ExerciseMode? = nil
@@ -39,6 +40,7 @@ struct ExerciseView: View {
 
     @StateObject private var viewModel = PoseViewModel()
     @StateObject private var counter = RepCounter()
+    @StateObject private var beeper  = RepBeeper()
     @State private var inCamera = false        // false → showing the how-to pre-roll
     @State private var cameraBlurred = false   // blur the frame once finished
 
@@ -133,6 +135,12 @@ struct ExerciseView: View {
             if case .finished = newState {
                 cameraBlurred = true
                 viewModel.stop()
+            }
+        }
+        .onChange(of: counter.repCount) { _, newCount in
+            // Only beep while the session is running (ignore resets to 0).
+            if case .running = counter.session, newCount > 0 {
+                beeper.beep(forRep: newCount)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: cameraBlurred)
