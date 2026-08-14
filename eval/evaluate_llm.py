@@ -99,7 +99,13 @@ def evaluate_rule_engine(user: User) -> AssessmentResult:
     if user.hasWalkingAid:
         result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
 
-    if user.hasRecentSurgeryOrHospitalization or user.hasHeartCondition or user.hasWalkingAid:
+    # Hard restriction: only conditions that directly impair safe exercise execution.
+    # Other flags (hospitalization, medication, balance) remain red-flag warnings
+    # that reduce intensity but still allow all 3 exercises.
+    has_hard_restriction = (user.hasHeartCondition or user.hasUncontrolledBP or
+                            user.hasNeurologicalCondition or user.hasWalkingAid or
+                            user.hasAcuteJointPainOrFracture)
+    if has_hard_restriction:
         result.workoutRestriction = "Mobility & Balance Only (Requires Professional Clearance)"
 
     # 2. Muscle mass (calf) & obesity (waist)

@@ -172,6 +172,26 @@ enum OnDeviceRAG {
             """
         }
 
+        // Classify clinical history into hard restrictions vs caution flags
+        // so the LLM prompt gives accurate context.
+        let hasHardRestriction = result.workoutRestriction == .mobilityOnly
+        let cautionFlags: [String] = [
+            user.hasRecentSurgeryOrHospitalization ? "operasi/rawat inap baru-baru ini" : nil,
+            user.hasRoutineMedication ? "obat-obatan rutin" : nil,
+            user.hasBalanceOrDizziness ? "gangguan keseimbangan/pusing" : nil,
+        ].compactMap { $0 }
+
+        let restrictionNote: String
+        if hasHardRestriction {
+            restrictionNote = "Status: PEMBATASAN KERAS — hanya gerakan ringan & keseimbangan (perlu izin profesional)."
+        } else if !cautionFlags.isEmpty {
+            restrictionNote = "Status: PERHATIAN — riwayat klinis berikut memerlukan penurunan intensitas tapi TIDAK menghalangi semua 3 latihan: \(cautionFlags.joined(separator: ", ")). Sesuaikan intensitas dan tambahkan catatan keselamatan yang relevan."
+        } else if !result.redFlags.isEmpty {
+            restrictionNote = "Status: ada tanda keselamatan — sesuaikan intensitas."
+        } else {
+            restrictionNote = "Status: tidak ada pembatasan khusus."
+        }
+
         return """
         Hasil skrining pengguna (sudah final — jelaskan, jangan ubah):
         \(resultSummary(result))
@@ -194,6 +214,8 @@ enum OnDeviceRAG {
         - Kondisi neurologis: \(user.hasNeurologicalCondition ? "Ya" : "Tidak")
         - Mengonsumsi obat-obatan rutin: \(user.hasRoutineMedication ? "Ya" : "Tidak")
         - Menggunakan alat bantu jalan: \(user.hasWalkingAid ? "Ya" : "Tidak")
+
+        \(restrictionNote)
 
         Rencana latihan awal yang disarankan (silakan sesuaikan, tetap aman):
         \(baseline)
