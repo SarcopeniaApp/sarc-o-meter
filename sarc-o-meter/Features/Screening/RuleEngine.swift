@@ -41,9 +41,20 @@ enum RuleEngine {
             result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
         }
 
-        // Safety restriction: surgery/hospitalization, heart condition, or walking
-        // aid limits the plan to supervised mobility & balance work only.
-        if user.hasRecentSurgeryOrHospitalization || user.hasHeartCondition || user.hasWalkingAid {
+        // Safety restriction: only conditions that DIRECTLY impair the ability
+        // to safely perform lower-limb resistance exercises trigger the hard
+        // mobility-only restriction.  Other flags (recent hospitalization,
+        // routine medication, balance/dizziness) remain red-flag warnings that
+        // reduce intensity via ExercisePlan's redFlags logic, but still allow
+        // all three exercises — because e.g. recovering from typhus doesn't
+        // prevent someone from doing Sit to Stand or Step Up.
+        let hasHardRestriction = user.hasHeartCondition ||
+                                 user.hasUncontrolledBP ||
+                                 user.hasNeurologicalCondition ||
+                                 user.hasWalkingAid ||
+                                 user.hasAcuteJointPainOrFracture
+
+        if hasHardRestriction {
             result.workoutRestriction = .mobilityOnly
         }
 

@@ -104,7 +104,11 @@ def evaluate_rule_engine(user: User) -> AssessmentResult:
         result.redFlags.append("Mengonsumsi obat-obatan rutin (perlu pertimbangan interaksi obat & latihan).")
     if user.hasWalkingAid:
         result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
-    if user.hasRecentSurgeryOrHospitalization or user.hasHeartCondition or user.hasWalkingAid:
+    # Hard restriction: only conditions that directly impair safe exercise execution.
+    has_hard_restriction = (user.hasHeartCondition or user.hasUncontrolledBP or
+                            user.hasNeurologicalCondition or user.hasWalkingAid or
+                            user.hasAcuteJointPainOrFracture)
+    if has_hard_restriction:
         result.workoutRestriction = "Mobility & Balance Only (Requires Professional Clearance)"
     if user.calf is not None:
         is_low = (user.gender == "Male" and user.calf < 34.0) or \
