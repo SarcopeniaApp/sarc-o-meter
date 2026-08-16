@@ -54,7 +54,6 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
     // Frame-logic state — touched only on sessionQueue (serial), so no locking.
     private var logicPhase: Phase = .front
     private var holdStartTime: Date?
-    private let targetHoldDuration: TimeInterval = 2.0 // 2 seconds scan duration
     private var isTransitioningInternal = false
     private var frontImage: UIImage?
     private var configured = false
@@ -130,11 +129,12 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
             holdStartTime = nil
         }
 
+        let targetHoldDuration: TimeInterval = (logicPhase == .front) ? 2.0 : 1.0
         let elapsed = holdStartTime != nil ? now.timeIntervalSince(holdStartTime!) : 0
         let publishProgress = min(1.0, elapsed / targetHoldDuration)
         let publishGuidance = guidanceText(phase: logicPhase, matching: match, fullyVisible: fullyVisible)
 
-        // Threshold reached (2 seconds hold): grab THIS frame now, while the buffer is valid.
+        // Threshold reached (2s hold for front, 1s hold for side): grab THIS frame now, while buffer is valid.
         if elapsed >= targetHoldDuration, let image = uprightImage(from: pixelBuffer) {
             holdStartTime = nil
             isTransitioningInternal = true
@@ -147,6 +147,8 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
                 logicPhase = .done
             }
 
+            let transitionDelay: TimeInterval = (currentPhase == .front) ? 2.0 : 1.0
+
             DispatchQueue.main.async {
                 self.progress = 1.0
                 self.poseDetected = true
@@ -156,8 +158,8 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 AudioServicesPlaySystemSound(1057)
 
-                // 2-second loading animation before moving to side pose or completing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // 2-second loading animation for front, 1-second for side before moving on
+                DispatchQueue.main.asyncAfter(deadline: .now() + transitionDelay) {
                     if currentPhase == .front {
                         self.phase = .side
                         self.guidance = "Putar 90° ke samping, tangan rileks"

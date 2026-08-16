@@ -51,7 +51,7 @@ struct ExerciseInstructionView: View {
                             }
                         }
                     }
-                    .frame(width: VPW - 48, height: (VPW - 48))
+                    .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .shadow(color: Theme.cardShadow, radius: 10, y: 6)
                     

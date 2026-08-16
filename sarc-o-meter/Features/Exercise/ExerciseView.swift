@@ -105,12 +105,22 @@ struct ExerciseView: View {
                         
                         VStack(spacing: 0) {
                             Spacer()
-                            if case .running = counter.session {
-                                timerRing
-                            } else if case .finished = counter.session {
-                                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                                    finish(counter.repCount)
+                            if case .countdown(let s) = counter.session {
+                                VStack(spacing: 4) {
+                                    Text("Mulai Dalam")
+                                        .font(.title2.bold())
+                                        .foregroundStyle(.white)
+                                    Text("\(s)")
+                                        .font(.system(size: 54, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.yellow)
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
                                 }
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 20))
+                            } else if case .running = counter.session {
+                                timerRing
                             } else {
                                 EmptyView()
                             }
@@ -118,6 +128,12 @@ struct ExerciseView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                     }
+
+                    statusBelow
+                    
+                    Spacer()
+
+                    bottomAction
                 }
                 .frame(maxWidth: .infinity)
             },
@@ -164,8 +180,7 @@ struct ExerciseView: View {
                 .animation(.easeInOut(duration: 0.2), value: counter.session)
                 .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
         }
-        .frame(width: VPW - 48)
-        .frame(maxHeight: .infinity)
+        .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Tap-to-start fallback (the counter also auto-starts on a steady posture).
         .onTapGesture {
@@ -185,39 +200,52 @@ struct ExerciseView: View {
 
     @ViewBuilder
     private var statusBelow: some View {
-        switch counter.session {
-        case .idle:
-            positionPrompt
+        VStack(spacing: 4) {
+            switch counter.session {
+            case .idle:
+                positionPrompt
 
-        case .countdown(let s):
-            VStack(spacing: 4) {
-                Text("\(s)")
-                    .font(.system(size: 68, weight: .bold, design: .rounded))
-                    .foregroundStyle(.yellow)
-                    .contentTransition(.numericText())
-                    .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
-                Text("Bersiap…")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.muted)
-            }
+            case .countdown:
+                VStack(spacing: 6) {
+                    Text("Posisi Terdeteksi!")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.ink)
+                    Text("Tahan posisi — latihan mulai otomatis")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.muted)
+                }
 
-        case .running:
-            timerRing
+            case .running:
+                VStack(spacing: 6) {
+                    Text("Latihan Berlangsung")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.ink)
+                    Text("Lakukan gerakan senyaman & seaman mungkin")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.muted)
+                }
 
-        case .finished:
-            VStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 44)).foregroundStyle(.green)
-                Text("Selesai! \(counter.repCount) repetisi")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.ink)
+            case .finished:
+                VStack(spacing: 6) {
+                    Text("Selesai!")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.green)
+                    Text("\(counter.repCount) repetisi berhasil")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                }
             }
         }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 16)
+        .frame(height: 60)
     }
 
     private var positionPrompt: some View {
         let stabilizing = counter.isPostureStabilizing
         let sit = counter.mode == .sitToStand
-        return VStack(spacing: 8) {
+        return VStack(spacing: 6) {
             Text(stabilizing ? "Posisi Terdeteksi!" : (sit ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Theme.ink)
@@ -227,9 +255,6 @@ struct ExerciseView: View {
                         : "Berdiri tegak menghadap samping untuk mulai otomatis"))
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.muted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 16)
         }
     }
 
@@ -255,6 +280,7 @@ struct ExerciseView: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.05), value: progress)
         }
+        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
     }
 
     private func timerColor(_ progress: Double) -> Color {
@@ -267,21 +293,24 @@ struct ExerciseView: View {
 
     @ViewBuilder
     private var bottomAction: some View {
-        switch counter.session {
-        case .finished:
-            PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                finish(counter.repCount)
-            }
-        default:
-            if allowSkip {
-                Button { finish(nil) } label: {
-                    Text("Saya tidak bisa melakukannya")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.muted)
-                        .underline()
+        VStack {
+            switch counter.session {
+            case .finished:
+                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                    finish(counter.repCount)
+                }
+            default:
+                if allowSkip {
+                    Button { finish(nil) } label: {
+                        Text("Saya tidak bisa melakukannya")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Theme.muted)
+                            .underline()
+                    }
                 }
             }
         }
+        .frame(height: 50)
     }
 
     private func finish(_ reps: Int?) {
