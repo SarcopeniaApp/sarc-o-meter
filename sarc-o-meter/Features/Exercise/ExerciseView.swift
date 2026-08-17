@@ -43,6 +43,7 @@ struct ExerciseView: View {
     @StateObject private var beeper  = RepBeeper()
     @State private var inCamera = false        // false → showing the how-to pre-roll
     @State private var cameraBlurred = false   // blur the frame once finished
+    @AppStorage("showExerciseLandmarks") private var showSkeleton = true     // toggle skeleton overlay on/off (persisted across exercises)
 
     private let VPW = UIScreen.main.bounds.size.width
 
@@ -137,6 +138,16 @@ struct ExerciseView: View {
                 }
                 .frame(maxWidth: .infinity)
             },
+            trailing: {
+                HStack(spacing: 8) {
+                    Text("Show Landmarks")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                    Toggle("", isOn: $showSkeleton)
+                        .labelsHidden()
+                        .tint(Theme.accent)
+                }
+            },
             scrollable: false,
             onBack: cameraBackAction   // back on the camera → this exercise's pre-roll
         )
@@ -170,7 +181,7 @@ struct ExerciseView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .blur(radius: cameraBlurred ? 18 : 0)
 
-            if !cameraBlurred {
+            if !cameraBlurred && showSkeleton {
                 PoseOverlayView(landmarks: viewModel.landmarks, imageSize: viewModel.imageSize)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }

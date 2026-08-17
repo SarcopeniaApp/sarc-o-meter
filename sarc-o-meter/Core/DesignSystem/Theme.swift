@@ -174,11 +174,12 @@ struct Subtitle: View {
     }
 }
 
-struct PageWrapper<Content: View, Footer: View>: View {
+struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
     @Environment(\.safeAreaInsets) private var safeAreaInsets
     
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer?
+    @ViewBuilder let trailing: Trailing
     
     private let onBack: (() -> Void)?
     private let title: String
@@ -194,10 +195,12 @@ struct PageWrapper<Content: View, Footer: View>: View {
         title: String,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer,
+        @ViewBuilder trailing: () -> Trailing = { EmptyView() },
         onBack: (() -> Void)? = nil
     ) {
         self.content = content()
         self.footer = footer()
+        self.trailing = trailing()
         self.onBack = onBack
         self.scrollable = true
         self.title = title
@@ -207,11 +210,13 @@ struct PageWrapper<Content: View, Footer: View>: View {
         title: String,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer = { EmptyView() },
+        @ViewBuilder trailing: () -> Trailing = { EmptyView() },
         scrollable: Bool = true,
         onBack: (() -> Void)? = nil
     ) {
         self.content = content()
         self.footer = nil
+        self.trailing = trailing()
         self.scrollable = scrollable
         self.onBack = onBack
         self.title = title
@@ -290,6 +295,7 @@ struct PageWrapper<Content: View, Footer: View>: View {
                         }
                     }
                     Spacer()
+                    self.trailing
                 }
             }
             .padding(EdgeInsets(top: safeAreaInsets.top + 12, leading: 24, bottom: 24, trailing: 24))
