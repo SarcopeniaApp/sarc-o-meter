@@ -129,8 +129,6 @@ struct ExerciseView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                     }
-
-                    statusBelow
                     
                     Spacer()
 
@@ -191,7 +189,7 @@ struct ExerciseView: View {
                 .animation(.easeInOut(duration: 0.2), value: counter.session)
                 .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
         }
-        .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
+        .frame(width: VPW - 48, height: (VPW - 48) * 1.42)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Tap-to-start fallback (the counter also auto-starts on a steady posture).
         .onTapGesture {
@@ -204,68 +202,6 @@ struct ExerciseView: View {
         case .running, .finished: return .green
         case .countdown:          return .yellow
         case .idle:               return counter.isPostureStabilizing ? .green : Color.white.opacity(0.9)
-        }
-    }
-
-    // MARK: Status below the frame (the "instructions")
-
-    @ViewBuilder
-    private var statusBelow: some View {
-        VStack(spacing: 4) {
-            switch counter.session {
-            case .idle:
-                positionPrompt
-
-            case .countdown:
-                VStack(spacing: 6) {
-                    Text("Posisi Terdeteksi!")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.ink)
-                    Text("Tahan posisi — latihan mulai otomatis")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.muted)
-                }
-
-            case .running:
-                VStack(spacing: 6) {
-                    Text("Latihan Berlangsung")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.ink)
-                    Text("Lakukan gerakan senyaman & seaman mungkin")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.muted)
-                }
-
-            case .finished:
-                VStack(spacing: 6) {
-                    Text("Selesai!")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.green)
-                    Text("\(counter.repCount) repetisi berhasil")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.muted)
-                }
-            }
-        }
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 16)
-        .frame(height: 60)
-    }
-
-    private var positionPrompt: some View {
-        let stabilizing = counter.isPostureStabilizing
-        let sit = counter.mode == .sitToStand
-        return VStack(spacing: 6) {
-            Text(stabilizing ? "Posisi Terdeteksi!" : (sit ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Theme.ink)
-            Text(stabilizing
-                 ? "Tahan posisi — latihan mulai otomatis"
-                 : (sit ? "Ambil posisi duduk di kursi untuk mulai otomatis"
-                        : "Berdiri tegak menghadap samping untuk mulai otomatis"))
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.muted)
         }
     }
 
