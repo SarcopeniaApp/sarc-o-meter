@@ -369,7 +369,7 @@ struct ContentView: View {
         plan = []
         weeklySchedule = nil
         isGenerating = false
-        step = .gender
+        step = .greeting
     }
 
     // MARK: Core pipeline (segmentation + Core ML)

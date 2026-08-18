@@ -43,6 +43,7 @@ struct ExerciseView: View {
     @StateObject private var beeper  = RepBeeper()
     @State private var inCamera = false        // false → showing the how-to pre-roll
     @State private var cameraBlurred = false   // blur the frame once finished
+    @AppStorage("showExerciseLandmarks") private var showSkeleton = true     // toggle skeleton overlay on/off (persisted across exercises)
 
     private let VPW = UIScreen.main.bounds.size.width
 
@@ -105,12 +106,22 @@ struct ExerciseView: View {
                         
                         VStack(spacing: 0) {
                             Spacer()
-                            if case .running = counter.session {
-                                timerRing
-                            } else if case .finished = counter.session {
-                                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                                    finish(counter.repCount)
+                            if case .countdown(let s) = counter.session {
+                                VStack(spacing: 4) {
+                                    Text("Mulai Dalam")
+                                        .font(.title2.bold())
+                                        .foregroundStyle(.white)
+                                    Text("\(s)")
+                                        .font(.system(size: 54, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.yellow)
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
                                 }
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 20))
+                            } else if case .running = counter.session {
+                                timerRing
                             } else {
                                 EmptyView()
                             }
@@ -118,8 +129,22 @@ struct ExerciseView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                     }
+                    
+                    Spacer()
+
+                    bottomAction
                 }
                 .frame(maxWidth: .infinity)
+            },
+            trailing: {
+                HStack(spacing: 8) {
+                    Text("Show Landmarks")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                    Toggle("", isOn: $showSkeleton)
+                        .labelsHidden()
+                        .tint(Theme.accent)
+                }
             },
             scrollable: false,
             onBack: cameraBackAction   // back on the camera → this exercise's pre-roll
@@ -154,7 +179,7 @@ struct ExerciseView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .blur(radius: cameraBlurred ? 18 : 0)
 
-            if !cameraBlurred {
+            if !cameraBlurred && showSkeleton {
                 PoseOverlayView(landmarks: viewModel.landmarks, imageSize: viewModel.imageSize)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
@@ -164,8 +189,7 @@ struct ExerciseView: View {
                 .animation(.easeInOut(duration: 0.2), value: counter.session)
                 .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
         }
-        .frame(width: VPW - 48)
-        .frame(maxHeight: .infinity)
+        .frame(width: VPW - 48, height: (VPW - 48) * 1.42)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Tap-to-start fallback (the counter also auto-starts on a steady posture).
         .onTapGesture {
@@ -178,58 +202,6 @@ struct ExerciseView: View {
         case .running, .finished: return .green
         case .countdown:          return .yellow
         case .idle:               return counter.isPostureStabilizing ? .green : Color.white.opacity(0.9)
-        }
-    }
-
-    // MARK: Status below the frame (the "instructions")
-
-    @ViewBuilder
-    private var statusBelow: some View {
-        switch counter.session {
-        case .idle:
-            positionPrompt
-
-        case .countdown(let s):
-            VStack(spacing: 4) {
-                Text("\(s)")
-                    .font(.system(size: 68, weight: .bold, design: .rounded))
-                    .foregroundStyle(.yellow)
-                    .contentTransition(.numericText())
-                    .animation(.spring(response: 0.35, dampingFraction: 0.6), value: s)
-                Text("Bersiap…")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.muted)
-            }
-
-        case .running:
-            timerRing
-
-        case .finished:
-            VStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 44)).foregroundStyle(.green)
-                Text("Selesai! \(counter.repCount) repetisi")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.ink)
-            }
-        }
-    }
-
-    private var positionPrompt: some View {
-        let stabilizing = counter.isPostureStabilizing
-        let sit = counter.mode == .sitToStand
-        return VStack(spacing: 8) {
-            Text(stabilizing ? "Posisi Terdeteksi!" : (sit ? "Silakan Duduk di Kursi" : "Berdiri Tampak Samping"))
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Theme.ink)
-            Text(stabilizing
-                 ? "Tahan posisi — latihan mulai otomatis"
-                 : (sit ? "Ambil posisi duduk di kursi untuk mulai otomatis"
-                        : "Berdiri tegak menghadap samping untuk mulai otomatis"))
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.muted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 16)
         }
     }
 
@@ -255,6 +227,7 @@ struct ExerciseView: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.05), value: progress)
         }
+        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
     }
 
     private func timerColor(_ progress: Double) -> Color {
@@ -267,21 +240,24 @@ struct ExerciseView: View {
 
     @ViewBuilder
     private var bottomAction: some View {
-        switch counter.session {
-        case .finished:
-            PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                finish(counter.repCount)
-            }
-        default:
-            if allowSkip {
-                Button { finish(nil) } label: {
-                    Text("Saya tidak bisa melakukannya")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.muted)
-                        .underline()
+        VStack {
+            switch counter.session {
+            case .finished:
+                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                    finish(counter.repCount)
+                }
+            default:
+                if allowSkip {
+                    Button { finish(nil) } label: {
+                        Text("Saya tidak bisa melakukannya")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Theme.muted)
+                            .underline()
+                    }
                 }
             }
         }
+        .frame(height: 50)
     }
 
     private func finish(_ reps: Int?) {

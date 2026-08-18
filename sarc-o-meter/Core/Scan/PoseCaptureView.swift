@@ -26,24 +26,39 @@ struct PoseCaptureView: View {
                         CameraPreview(session: camera.session)
                             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         
-                        // Pose guide: shows the target pose (A-pose, then side). It's bold while
-                        // the person is too close (whole body not yet in frame) to nudge them to
-                        // step back, and fades once their full body is visible.
-                        Image(camera.phase == .side ? "PoseGuideSide" : "PoseGuideFront")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 34)
-                            .opacity(camera.bodyVisible ? 0.16 : 0.72)
-                            .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
-                            .animation(.easeInOut(duration: 0.2), value: camera.phase)
-                            .allowsHitTesting(false)
+                        // Pose guide: shows humanpose.png for front pose, and PoseGuideSide for side pose.
+                        // It serves as a visual guide overlay on top of the camera feed.
+                        if camera.phase == .front {
+                            Image("humanpose")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .foregroundStyle(Color.yellow)
+                                .padding(.vertical, 24)
+                                .opacity(camera.bodyVisible ? 0.35 : 0.75)
+                                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
+                                .animation(.easeInOut(duration: 0.2), value: camera.phase)
+                                .allowsHitTesting(false)
+                        } else {
+                            Image("sidepose")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .foregroundStyle(Color.yellow)
+                                .padding(.vertical, 24)
+                                .opacity(camera.bodyVisible ? 0.35 : 0.75)
+                                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
+                                .animation(.easeInOut(duration: 0.2), value: camera.phase)
+                                .allowsHitTesting(false)
+                        }
+
                         
+                        // Animated progress border filling from top clockwise
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(camera.poseDetected ? Color.green : Color.white.opacity(0.9),
-                                    lineWidth: 3)
-                            .animation(.easeInOut(duration: 0.15), value: camera.poseDetected)
+                            .trim(from: 0, to: camera.poseDetected ? camera.progress : 0)
+                            .stroke(frameBorderColor, style: StrokeStyle(lineWidth: 24, lineCap: .round))
+                            .animation(.linear(duration: 0.1), value: camera.progress)
+                            .animation(.easeInOut(duration: 0.25), value: frameBorderColor)
                         
                         if !camera.authorized {
                             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -52,21 +67,35 @@ struct PoseCaptureView: View {
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(.white)
                         }
+
                         
-                        // Hold-to-capture ring, tucked into the bottom of the frame.
-                        VStack {
-                            Spacer()
+                        // Success transition overlay: green background + loading animation for 2s
+                        if camera.isTransitioning {
                             ZStack {
-                                Circle().stroke(.white.opacity(0.4), lineWidth: 5)
-                                Circle()
-                                    .trim(from: 0, to: camera.progress)
-                                    .stroke(camera.poseDetected ? Color.green : Theme.accent,
-                                            style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                                    .rotationEffect(.degrees(-90))
-                                    .animation(.linear(duration: 0.1), value: camera.progress)
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(Color.green)
+                                
+                                VStack(spacing: 16) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 60, weight: .bold))
+                                        .foregroundStyle(.white)
+                                    
+                                    ProgressView()
+                                        .tint(.white)
+                                        .controlSize(.large)
+                                    
+                                    Text("Berhasil Dipindai!")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundStyle(.white)
+                                    
+                                    Text(camera.phase == .front ? "Menyiapkan pindai tubuh samping..." : "Memproses hasil...")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.white.opacity(0.9))
+                                }
+                                .padding(24)
                             }
-                            .frame(width: 58, height: 58)
-                            .padding(.bottom, 18)
+                            .transition(.opacity)
+                            .animation(.easeInOut(duration: 0.3), value: camera.isTransitioning)
                         }
                     }
                     .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
@@ -98,10 +127,18 @@ struct PoseCaptureView: View {
         .onDisappear { camera.stop() }
     }
     
+    private var frameBorderColor: Color {
+        if camera.poseDetected {
+            return camera.progress < 0.70 ? Color.yellow : Color.green
+        } else {
+            return Color.white.opacity(0.9)
+        }
+    }
+    
     private var title: String {
         switch camera.phase {
-            case .front: return "Foto depan"
-            case .side:  return "Foto samping"
+            case .front: return "Hadap depan"
+            case .side:  return "Hadap samping"
             case .done:  return "Selesai"
         }
     }
@@ -119,7 +156,7 @@ struct PoseCaptureView: View {
     private var instructions: some View {
         VStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 20, weight: .bold))
+                .font(.title.bold())
                 .foregroundStyle(Theme.ink)
             Text(camera.guidance)
                 .font(.system(size: 15))
