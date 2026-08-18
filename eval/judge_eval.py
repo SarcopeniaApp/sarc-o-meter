@@ -61,19 +61,22 @@ class AssessmentResult:
 
 @dataclass
 class User:
-    gender: Optional[str] = None
+    gender: Optional[str] = None       # "Male" | "Female"
     age: Optional[int] = None
-    height: Optional[float] = None
-    weight: Optional[float] = None
-    calf: Optional[float] = None
-    waist: Optional[float] = None
+    height: Optional[float] = None     # cm
+    weight: Optional[float] = None     # kg
+    calf: Optional[float] = None       # cm
+    waist: Optional[float] = None      # cm
     chest: Optional[float] = None
     hip: Optional[float] = None
     hasRecentSurgeryOrHospitalization: bool = False
-    hasUnstableCardio: bool = False
-    hasRecentFalls: bool = False
+    hasHeartCondition: bool = False
+    hasUncontrolledBP: bool = False
+    hasBalanceOrDizziness: bool = False
     hasAcuteJointPainOrFracture: bool = False
     hasNeurologicalCondition: bool = False
+    hasRoutineMedication: bool = False
+    hasWalkingAid: bool = False
     sitToStandReps: Optional[int] = None
     stepUpReps: Optional[int] = None
     calfRaiseReps: Optional[int] = None
@@ -87,15 +90,25 @@ def evaluate_rule_engine(user: User) -> AssessmentResult:
     result = AssessmentResult()
     if user.hasRecentSurgeryOrHospitalization:
         result.redFlags.append("Operasi besar atau rawat inap baru-baru ini (< 3 bulan).")
-    if user.hasUnstableCardio:
-        result.redFlags.append("Kondisi kardiovaskular tidak stabil.")
-    if user.hasRecentFalls:
-        result.redFlags.append("Riwayat sering terjatuh.")
+    if user.hasHeartCondition:
+        result.redFlags.append("Gangguan jantung (sering berdebar-debar atau riwayat diagnosis jantung).")
+    if user.hasUncontrolledBP:
+        result.redFlags.append("Tekanan darah tinggi tidak terkontrol.")
+    if user.hasBalanceOrDizziness:
+        result.redFlags.append("Sering kehilangan keseimbangan atau merasa pusing.")
     if user.hasAcuteJointPainOrFracture:
         result.redFlags.append("Nyeri sendi akut atau patah tulang belum sembuh.")
     if user.hasNeurologicalCondition:
         result.redFlags.append("Kondisi neurologis yang memengaruhi keseimbangan.")
-    if user.hasRecentSurgeryOrHospitalization or user.hasUnstableCardio:
+    if user.hasRoutineMedication:
+        result.redFlags.append("Mengonsumsi obat-obatan rutin (perlu pertimbangan interaksi obat & latihan).")
+    if user.hasWalkingAid:
+        result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
+    # Hard restriction: only conditions that directly impair safe exercise execution.
+    has_hard_restriction = (user.hasHeartCondition or user.hasUncontrolledBP or
+                            user.hasNeurologicalCondition or user.hasWalkingAid or
+                            user.hasAcuteJointPainOrFracture)
+    if has_hard_restriction:
         result.workoutRestriction = "Mobility & Balance Only (Requires Professional Clearance)"
     if user.calf is not None:
         is_low = (user.gender == "Male" and user.calf < 34.0) or \
@@ -166,8 +179,26 @@ def relevant_tags(result: AssessmentResult):
     elif risk.startswith("Severe"): tags.add("risk_severe")
     return tags
 
-def retrieve(tags: set, limit: int = 3):
-    return [c for c in KNOWLEDGE_CHUNKS if set(c["tags"]) & tags][:limit]
+def max_chunks(result: AssessmentResult) -> int:
+    risk = result.overallRisk
+    if risk.startswith("Severe") or risk.startswith("High"):
+        return 6
+    if risk.startswith("Mid"):
+        return 4
+    return 3
+
+def safety_critical_chunk_ids(result: AssessmentResult) -> set:
+    if result.redFlags or result.overallRisk.startswith("Severe"):
+        return {"kb_contraindication_01", "kb_risk_high_severe_01"}
+    return set()
+
+def retrieve(tags: set, limit: int, pinned_ids: set = None):
+    if pinned_ids is None:
+        pinned_ids = set()
+    matching_chunks = [c for c in KNOWLEDGE_CHUNKS if set(c["tags"]) & tags]
+    pinned = [c for c in matching_chunks if c["id"] in pinned_ids]
+    remaining = [c for c in matching_chunks if c["id"] not in pinned_ids]
+    return (pinned + remaining)[:limit]
 
 def retrieve_all_relevant(tags: set):
     """All matching chunks (no limit) — for Recall@K."""
@@ -204,20 +235,28 @@ TEST_PERSONAS = [
                      sitToStandReps=2, stepUpReps=2, calfRaiseReps=4),
     },
     {
-        "name": "E — 68F Red Flags (recent surgery + unstable cardio)",
+        "name": "E — 68F Red Flags (recent surgery + heart condition)",
         "user": User(gender="Female", age=68, height=157.0, weight=60.0,
                      calf=32.5, waist=82.0,
                      hasRecentSurgeryOrHospitalization=True,
-                     hasUnstableCardio=True,
+                     hasHeartCondition=True,
                      sitToStandReps=4, stepUpReps=3, calfRaiseReps=7),
     },
     {
         "name": "F — 55M Multiple Red Flags + skipped exercises",
         "user": User(gender="Male", age=55, height=172.0, weight=80.0,
                      calf=33.0, waist=92.0,
-                     hasRecentFalls=True,
+                     hasBalanceOrDizziness=True,
                      hasAcuteJointPainOrFracture=True,
                      hasNeurologicalCondition=True,
+                     sitToStandReps=None, stepUpReps=None, calfRaiseReps=None),
+    },
+    {
+        "name": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+        "user": User(gender="Female", age=70, height=152.0, weight=48.0,
+                     calf=29.0, waist=76.0,
+                     hasBalanceOrDizziness=True,
+                     hasRoutineMedication=True,
                      sitToStandReps=None, stepUpReps=None, calfRaiseReps=None),
     },
 ]
@@ -326,8 +365,10 @@ USER PROFILE:
 - Height: {user.height} cm, Weight: {user.weight} kg
 - Calf circumference: {user.calf} cm, Waist: {user.waist} cm
 - Clinical flags: surgery={user.hasRecentSurgeryOrHospitalization}, \
-unstable_cardio={user.hasUnstableCardio}, falls={user.hasRecentFalls}, \
-joint_pain={user.hasAcuteJointPainOrFracture}, neuro={user.hasNeurologicalCondition}
+heart_condition={user.hasHeartCondition}, uncontrolled_bp={user.hasUncontrolledBP}, \
+balance_dizziness={user.hasBalanceOrDizziness}, \
+joint_pain={user.hasAcuteJointPainOrFracture}, neuro={user.hasNeurologicalCondition}, \
+routine_medication={user.hasRoutineMedication}, walking_aid={user.hasWalkingAid}
 
 SCREENING RESULT:
 - Overall risk: {result.overallRisk}
@@ -410,7 +451,7 @@ Key rules to check:
 - High risk → lower intensity (2 sets × 6-10 reps, longer rest)
 - Severe risk → very low intensity (1 set × 4-8 reps, long rest, slow tempo)
 - Red flags → MUST mention professional supervision, reduced intensity
-- Mobility-only restriction → should prescribe only gentle exercises
+- Mobility-only restriction / Severe Risk → MUST prescribe ONLY 1 gentle exercise (Calf Raise). DO NOT penalize for "lack of variety" or "insufficient exercises" if they are severe risk. A single exercise is the medically correct action.
 - NEVER prescribe exercises outside: Sit to Stand, Step Up, Calf Raise
 
 Reply ONLY with valid JSON:
@@ -619,7 +660,9 @@ def main():
         # Re-compute assessment & retrieval context
         result = evaluate_rule_engine(user)
         tags = relevant_tags(result)
-        retrieved = retrieve(tags, limit=3)
+        effective_limit = max_chunks(result)
+        pinned = safety_critical_chunk_ids(result)
+        retrieved = retrieve(tags, limit=effective_limit, pinned_ids=pinned)
         all_relevant = retrieve_all_relevant(tags)
         retrieved_ids = [c["id"] for c in retrieved]
 

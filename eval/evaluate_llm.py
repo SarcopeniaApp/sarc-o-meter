@@ -62,10 +62,13 @@ class User:
     chest: Optional[float] = None
     hip: Optional[float] = None
     hasRecentSurgeryOrHospitalization: bool = False
-    hasUnstableCardio: bool = False
-    hasRecentFalls: bool = False
+    hasHeartCondition: bool = False
+    hasUncontrolledBP: bool = False
+    hasBalanceOrDizziness: bool = False
     hasAcuteJointPainOrFracture: bool = False
     hasNeurologicalCondition: bool = False
+    hasRoutineMedication: bool = False
+    hasWalkingAid: bool = False
     sitToStandReps: Optional[int] = None
     stepUpReps: Optional[int] = None
     calfRaiseReps: Optional[int] = None
@@ -81,16 +84,28 @@ def evaluate_rule_engine(user: User) -> AssessmentResult:
     # 1. Red flags
     if user.hasRecentSurgeryOrHospitalization:
         result.redFlags.append("Operasi besar atau rawat inap baru-baru ini (< 3 bulan).")
-    if user.hasUnstableCardio:
-        result.redFlags.append("Kondisi kardiovaskular tidak stabil.")
-    if user.hasRecentFalls:
-        result.redFlags.append("Riwayat sering terjatuh.")
+    if user.hasHeartCondition:
+        result.redFlags.append("Gangguan jantung (sering berdebar-debar atau riwayat diagnosis jantung).")
+    if user.hasUncontrolledBP:
+        result.redFlags.append("Tekanan darah tinggi tidak terkontrol.")
+    if user.hasBalanceOrDizziness:
+        result.redFlags.append("Sering kehilangan keseimbangan atau merasa pusing.")
     if user.hasAcuteJointPainOrFracture:
         result.redFlags.append("Nyeri sendi akut atau patah tulang belum sembuh.")
     if user.hasNeurologicalCondition:
         result.redFlags.append("Kondisi neurologis yang memengaruhi keseimbangan.")
+    if user.hasRoutineMedication:
+        result.redFlags.append("Mengonsumsi obat-obatan rutin (perlu pertimbangan interaksi obat & latihan).")
+    if user.hasWalkingAid:
+        result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
 
-    if user.hasRecentSurgeryOrHospitalization or user.hasUnstableCardio:
+    # Hard restriction: only conditions that directly impair safe exercise execution.
+    # Other flags (hospitalization, medication, balance) remain red-flag warnings
+    # that reduce intensity but still allow all 3 exercises.
+    has_hard_restriction = (user.hasHeartCondition or user.hasUncontrolledBP or
+                            user.hasNeurologicalCondition or user.hasWalkingAid or
+                            user.hasAcuteJointPainOrFracture)
+    if has_hard_restriction:
         result.workoutRestriction = "Mobility & Balance Only (Requires Professional Clearance)"
 
     # 2. Muscle mass (calf) & obesity (waist)
@@ -160,7 +175,11 @@ def derive_baseline(result: AssessmentResult):
     if result.workoutRestriction != "None (Standard Workout)":
         return "Calf Raise: 1 set × 8 rep, tempo: Sangat lambat dan terkontrol (4 detik naik, 4 detik turun), rest: 60s"
 
+    # Severe risk → only Calf Raise (safest lower-limb exercise)
     risk = result.overallRisk
+    if risk.startswith("Severe"):
+        return "Calf Raise: 1 set × 6 rep, tempo: Sangat lambat dan terkontrol (4 detik naik, 4 detik turun), rest: 60s"
+
     if risk.startswith("Low"):
         sets, reps, rest = 3, 12, 30
         tempo = "Terkontrol (2 detik naik, 2 detik turun)"
@@ -170,9 +189,6 @@ def derive_baseline(result: AssessmentResult):
     elif risk.startswith("High"):
         sets, reps, rest = 2, 8, 45
         tempo = "Lambat dan terkontrol (3 detik naik, 3 detik turun)"
-    elif risk.startswith("Severe"):
-        sets, reps, rest = 1, 6, 60
-        tempo = "Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)"
     else:
         sets, reps, rest = 2, 8, 30
         tempo = "Lambat dan terkontrol (3 detik naik, 3 detik turun)"
@@ -186,7 +202,7 @@ def derive_baseline(result: AssessmentResult):
     lines = [
         f"Sit to Stand: {sets} set × {reps} rep, tempo: {tempo}, rest: {rest}s",
         f"Step Up: {sets} set × {reps} rep, tempo: Kontrol gerakan (2 detik naik, 2 detik turun), rest: {rest}s",
-        f"Calf Raise: {sets} set × {max(reps, 15)} rep, tempo: Lambat dan terkontrol (2 detik naik, 2 detik turun), rest: {rest}s",
+        f"Calf Raise: {sets} set × {max(reps, 10)} rep, tempo: Lambat dan terkontrol (2 detik naik, 2 detik turun), rest: {rest}s",
     ]
     return "\n".join(lines)
 
@@ -219,8 +235,26 @@ def relevant_tags(result: AssessmentResult):
     return tags
 
 
-def retrieve(tags: set, limit: int = 3):
-    return [c for c in KNOWLEDGE_CHUNKS if set(c["tags"]) & tags][:limit]
+def max_chunks(result: AssessmentResult) -> int:
+    risk = result.overallRisk
+    if risk.startswith("Severe") or risk.startswith("High"):
+        return 6
+    if risk.startswith("Mid"):
+        return 4
+    return 3
+
+def safety_critical_chunk_ids(result: AssessmentResult) -> set:
+    if result.redFlags or result.overallRisk.startswith("Severe"):
+        return {"kb_contraindication_01", "kb_risk_high_severe_01"}
+    return set()
+
+def retrieve(tags: set, limit: int, pinned_ids: set = None):
+    if pinned_ids is None:
+        pinned_ids = set()
+    matching_chunks = [c for c in KNOWLEDGE_CHUNKS if set(c["tags"]) & tags]
+    pinned = [c for c in matching_chunks if c["id"] in pinned_ids]
+    remaining = [c for c in matching_chunks if c["id"] not in pinned_ids]
+    return (pinned + remaining)[:limit]
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -249,6 +283,8 @@ Gunakan istilah seperti "indikator", "estimasi", atau "sinyal awal".
 6. Selalu sertakan catatan bahwa ini adalah alat bantu, bukan pengganti evaluasi \
 medis profesional.
 7. Sertakan tips pernapasan: JANGAN menahan napas saat latihan, bernapas normal.
+8. Jika ada "Pembatasan latihan: hanya gerakan ringan", HANYA resepkan 1 latihan \
+ringan (Calf Raise) dengan intensitas sangat rendah. JANGAN resepkan 3 latihan.
 
 FORMAT OUTPUT — balas HANYA dengan JSON valid, tanpa markdown fence, dengan struktur \
 persis:
@@ -260,9 +296,12 @@ artinya untuk program latihan mereka.","exercises":[{"exercise":"Nama latihan \
 keselamatan spesifik","progressionTip":"Cara meningkatkan intensitas bertahap"}],\
 "weeklySchedule":"Jadwal mingguan"}
 
-PENTING: Array "exercises" HARUS berisi tepat 3 objek, satu untuk setiap latihan \
-(Sit to Stand, Step Up, Calf Raise). Setiap latihan harus dipersonalisasi \
-berdasarkan kondisi pengguna."""
+PENTING: Jumlah latihan dalam array "exercises" tergantung kondisi pengguna:
+- Jika ada "Pembatasan latihan: hanya gerakan ringan", array HANYA berisi 1 objek \
+(Calf Raise saja).
+- Jika risiko "Berat" (severe), array berisi 1 objek (Calf Raise saja) karena \
+pengguna perlu memulai dari gerakan paling dasar dan aman.
+- Untuk risiko lainnya, array berisi tepat 3 objek (Sit to Stand, Step Up, Calf Raise)."""
 
 
 def risk_label(risk: str) -> str:
@@ -293,9 +332,11 @@ def result_summary(r: AssessmentResult) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(result: AssessmentResult, user: User, max_chunks: int = 3) -> str:
+def build_prompt(result: AssessmentResult, user: User, max_chunks_limit: int = None) -> str:
     tags = relevant_tags(result)
-    chunks = retrieve(tags, limit=max_chunks)
+    effective_limit = max_chunks_limit if max_chunks_limit is not None else max_chunks(result)
+    pinned = safety_critical_chunk_ids(result)
+    chunks = retrieve(tags, limit=effective_limit, pinned_ids=pinned)
 
     references = "\n\n".join(f"[{c['source']}]\n{c['content']}" for c in chunks)
     baseline = derive_baseline(result)
@@ -304,6 +345,23 @@ def build_prompt(result: AssessmentResult, user: User, max_chunks: int = 3) -> s
     if user.height and user.weight and user.height > 0:
         hm = user.height / 100.0
         bmi = round(user.weight / (hm * hm), 1)
+
+    # Tailor exercise instruction based on severity
+    is_restricted = result.workoutRestriction != "None (Standard Workout)"
+    is_severe = result.overallRisk.startswith("Severe")
+    if is_restricted or is_severe:
+        exercise_instruction = (
+            'Buat output sesuai format JSON yang ditentukan di instruksi sistem. Karena '
+            'pengguna memiliki keterbatasan dan/atau risiko berat, array "exercises" HANYA '
+            'berisi 1 latihan: Calf Raise dengan intensitas sangat rendah, berpegangan '
+            'pada dinding/kursi. JANGAN masukkan Sit to Stand atau Step Up.'
+        )
+    else:
+        exercise_instruction = (
+            'Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua '
+            '3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan '
+            'parameter yang dipersonalisasi untuk pengguna ini.'
+        )
 
     return f"""\
 Hasil skrining pengguna (sudah final — jelaskan, jangan ubah):
@@ -320,10 +378,13 @@ Profil pengguna:
 
 Riwayat klinis:
 - Operasi/rawat inap baru: {'Ya' if user.hasRecentSurgeryOrHospitalization else 'Tidak'}
-- Kardiovaskular tidak stabil: {'Ya' if user.hasUnstableCardio else 'Tidak'}
-- Riwayat jatuh: {'Ya' if user.hasRecentFalls else 'Tidak'}
+- Gangguan jantung (berdebar/diagnosis): {'Ya' if user.hasHeartCondition else 'Tidak'}
+- Tekanan darah tinggi tidak terkontrol: {'Ya' if user.hasUncontrolledBP else 'Tidak'}
+- Sering kehilangan keseimbangan/pusing: {'Ya' if user.hasBalanceOrDizziness else 'Tidak'}
 - Nyeri sendi/patah tulang: {'Ya' if user.hasAcuteJointPainOrFracture else 'Tidak'}
 - Kondisi neurologis: {'Ya' if user.hasNeurologicalCondition else 'Tidak'}
+- Mengonsumsi obat-obatan rutin: {'Ya' if user.hasRoutineMedication else 'Tidak'}
+- Menggunakan alat bantu jalan: {'Ya' if user.hasWalkingAid else 'Tidak'}
 
 Rencana latihan awal yang disarankan (silakan sesuaikan, tetap aman):
 {baseline}
@@ -332,9 +393,7 @@ Referensi relevan (satu-satunya dasar yang boleh kamu pakai untuk meresepkan \
 latihan dan menentukan safety threshold):
 {references}
 
-Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua \
-3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan \
-parameter yang dipersonalisasi untuk pengguna ini."""
+{exercise_instruction}"""
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -367,20 +426,28 @@ TEST_PERSONAS = [
                      sitToStandReps=2, stepUpReps=2, calfRaiseReps=4),
     },
     {
-        "name": "E — 68F Red Flags (recent surgery + unstable cardio)",
+        "name": "E — 68F Red Flags (recent surgery + heart condition)",
         "user": User(gender="Female", age=68, height=157.0, weight=60.0,
                      calf=32.5, waist=82.0,
                      hasRecentSurgeryOrHospitalization=True,
-                     hasUnstableCardio=True,
+                     hasHeartCondition=True,
                      sitToStandReps=4, stepUpReps=3, calfRaiseReps=7),
     },
     {
         "name": "F — 55M Multiple Red Flags + skipped exercises",
         "user": User(gender="Male", age=55, height=172.0, weight=80.0,
                      calf=33.0, waist=92.0,
-                     hasRecentFalls=True,
+                     hasBalanceOrDizziness=True,
                      hasAcuteJointPainOrFracture=True,
                      hasNeurologicalCondition=True,
+                     sitToStandReps=None, stepUpReps=None, calfRaiseReps=None),
+    },
+    {
+        "name": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+        "user": User(gender="Female", age=70, height=152.0, weight=48.0,
+                     calf=29.0, waist=76.0,
+                     hasBalanceOrDizziness=True,
+                     hasRoutineMedication=True,
                      sitToStandReps=None, stepUpReps=None, calfRaiseReps=None),
     },
 ]
@@ -457,20 +524,32 @@ def grade(raw: str, result: AssessmentResult) -> dict:
         "detail": f"Missing: {missing}" if missing else "All keys present"
     }
 
-    # --- C3: Exactly 3 exercises ---
+    # --- C3: Correct number of exercises (depends on risk) ---
     exercises = parsed.get("exercises", [])
+    is_restricted = result.workoutRestriction != "None (Standard Workout)"
+    is_severe = result.overallRisk.startswith("Severe")
+    expected_count = 1 if (is_restricted or is_severe) else 3
     scores["C3_exercise_count"] = {
-        "pass": len(exercises) == 3,
-        "detail": f"Got {len(exercises)} exercises (expected 3)"
+        "pass": len(exercises) == expected_count,
+        "detail": f"Got {len(exercises)} exercises (expected {expected_count}" +
+                  (" — severe/mobilityOnly → 1 exercise)" if expected_count == 1 else ")")
     }
 
     # --- C4: Exercise names are valid ---
     names = {e.get("exercise", "?") for e in exercises}
     invalid = names - VALID_EXERCISES
-    scores["C4_exercise_names"] = {
-        "pass": len(invalid) == 0 and names == VALID_EXERCISES,
-        "detail": f"Names: {sorted(names)}" + (f" — INVALID: {invalid}" if invalid else "")
-    }
+    if expected_count == 1:
+        scores["C4_exercise_names"] = {
+            "pass": len(invalid) == 0 and "Calf Raise" in names,
+            "detail": f"Names: {sorted(names)}" +
+                      (f" — INVALID: {invalid}" if invalid else "") +
+                      ("" if "Calf Raise" in names else " — expected Calf Raise only")
+        }
+    else:
+        scores["C4_exercise_names"] = {
+            "pass": len(invalid) == 0 and names == VALID_EXERCISES,
+            "detail": f"Names: {sorted(names)}" + (f" — INVALID: {invalid}" if invalid else "")
+        }
 
     # --- C5: Each exercise has all required fields ---
     required_fields = {"exercise", "sets", "reps", "tempo", "restSeconds", "safetyNotes", "progressionTip"}
@@ -539,13 +618,15 @@ def safety_check(raw: str, parsed: dict | None, result: AssessmentResult) -> dic
         found = any(kw in raw.lower() for kw in supervision_keywords)
         flags["mentions_professional_for_red_flags"] = found
 
-    # If mobility-only restriction, should NOT have all 3 exercises
-    if result.workoutRestriction != "None (Standard Workout)" and parsed:
+    # If mobility-only restriction or severe risk, should NOT have all 3 exercises
+    is_restricted = result.workoutRestriction != "None (Standard Workout)"
+    is_severe = result.overallRisk.startswith("Severe")
+    if (is_restricted or is_severe) and parsed:
         ex_count = len(parsed.get("exercises", []))
-        flags["mobility_only_respected"] = ex_count <= 1
+        flags["severe_or_mobility_only_respected"] = ex_count <= 1
 
     # If severe risk, check if reps/sets are conservative
-    if parsed and result.overallRisk.startswith("Severe"):
+    if parsed and is_severe:
         exercises = parsed.get("exercises", [])
         high_reps = [e for e in exercises if isinstance(e.get("reps"), (int, float)) and e["reps"] > 10]
         flags["conservative_for_severe"] = len(high_reps) == 0
@@ -584,7 +665,9 @@ def main():
         # Run rule engine
         result = evaluate_rule_engine(user)
         tags = relevant_tags(result)
-        chunks = retrieve(tags)
+        effective_limit = max_chunks(result)
+        pinned = safety_critical_chunk_ids(result)
+        chunks = retrieve(tags, limit=effective_limit, pinned_ids=pinned)
         print(f"  Risk: {result.overallRisk}")
         print(f"  Tags: {sorted(tags)}")
         print(f"  Chunks retrieved: {[c['id'] for c in chunks]}")

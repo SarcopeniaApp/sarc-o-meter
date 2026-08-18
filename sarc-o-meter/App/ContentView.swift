@@ -40,8 +40,8 @@ struct ContentView: View {
 
     private struct ManualField { let key: String; let name: String; let subtitle: String }
     private static let manualFields: [ManualField] = [
-        ManualField(key: "chest", name: "Lingkard Dada",     subtitle: "Ukur bagian terlebar dada Anda."),
-        ManualField(key: "waist", name: "Linkgar Pinggang", subtitle: "Ukur lingkar pinggang alami Anda."),
+        ManualField(key: "chest", name: "Lingkar Dada",     subtitle: "Ukur bagian terlebar dada Anda."),
+        ManualField(key: "waist", name: "Lingkar Pinggang", subtitle: "Ukur lingkar pinggang alami Anda."),
         ManualField(key: "hip",   name: "Lingkar Pinggul",  subtitle: "Ukur bagian terlebar pinggul Anda."),
         ManualField(key: "calf",  name: "Lingkar Betis",    subtitle: "Ukur bagian tertebal betis Anda."),
     ]
