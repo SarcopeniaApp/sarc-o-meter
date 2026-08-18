@@ -30,7 +30,7 @@ struct ContentView: View {
     // filled in means "returning user → show the tracker".
     @State private var user: User = UserStore.load() ?? User()
 
-    @State private var step: Step = .questionnaire
+    @State private var step: Step = .greeting
     @State private var errorText: String?
 
     // Manual-entry sub-flow state (a transient input buffer; committed into `user`).
@@ -369,7 +369,7 @@ struct ContentView: View {
         plan = []
         weeklySchedule = nil
         isGenerating = false
-        step = .gender
+        step = .greeting
     }
 
     // MARK: Core pipeline (segmentation + Core ML)
