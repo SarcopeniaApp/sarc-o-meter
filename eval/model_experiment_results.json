@@ -1,0 +1,681 @@
+{
+  "metadata": {
+    "date": "2026-08-17T15:18:33.454183",
+    "personas_count": 7,
+    "models_count": 4
+  },
+  "models": [
+    {
+      "model": {
+        "tag": "qwen2.5:3b",
+        "name": "Qwen 2.5 3B (Q4_K_M)",
+        "params": "3B",
+        "size_gb": 1.9,
+        "reason": "Current production model in the iOS app. Qwen 2.5 is specifically optimized for instruction following and structured output (JSON). At 3B parameters with 4-bit quantization, it represents the sweet spot between on-device feasibility (~2GB RAM) and output quality. It natively supports Bahasa Indonesia."
+      },
+      "status": "completed",
+      "personas": [
+        {
+          "persona": "A — Healthy 45F (Low Risk)",
+          "risk": "Low Risk",
+          "latency_s": 23.8,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n    \"insight\": \"Pengguna adalah wanita berusia 45 tahun dengan estimasi risiko rendah. Profil fisiknya menunjukkan massa otot dan kekuatan normal, serta performa berjalan yang normal. Pengguna tidak memiliki riwayat klinis yang kontraindikasikan untuk aktivitas fisik. Dengan kondisi ini, fokus utama adalah mempertahankan dan mencegah penurunan massa otot dan kekuatan dengan rutinitas latihan resistensi.\",\n    \"exercises\": [\n        {\n            \"exercise\": \"Sit to Stand\",\n            \"sets\": 3,\n            \"reps\": 12,\n            \"tempo\": \"Terkontrol (2 detik naik, 2 detik turun)\",\n            \"restSeconds\": 30,\n            \"safetyNotes\": \"Pastikan pengguna tidak merasakan nyeri saat bergerak. Perhatikan keseimbangan dan kestabilan.\",\n            \"progressionTip\": \"Meningkatkan intensitas dengan menambahkan beban atau melakukan gerakan lebih cepat.\"\n        },\n        {\n            \"exercise\": \"Step Up\",\n            \"sets\": 3,\n            \"reps\": 12,\n            \"tempo\": \"Kontrol ge"
+        },
+        {
+          "persona": "B — 62M Possible Sarcopenia (Mid Risk)",
+          "risk": "Mid Risk (Possible Sarcopenia)",
+          "latency_s": 16.3,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n  \"insight\": \"Pengguna memiliki massa otot rendah dan kekuatan normal, tetapi mengalami tanda obesitas sentral (WHtR > 0,5). Ini berpotensi menunjukkan sarcopenic obesity, di mana lemak visceral yang tinggi dapat berpengaruh pada kualitas otot. Pengguna ini dianjurkan untuk melakukan latihan resistensi dengan intensitas rendah dan bertahap untuk memastikan keselamatan.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Penggunaan kursi yang tepat untuk memastikan gerakan dilakukan dengan benar.\",\n      \"progressionTip\": \"Meningkatkan kecepatan naik dan turun secara bertahap.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Kontrol gerakan (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Penggunaan peralatan step-up yang tepat untuk memastikan keseimbang"
+        },
+        {
+          "persona": "C — 72F Low Muscle + Low Strength (High Risk)",
+          "risk": "High Risk (Probable/Confirmed Sarcopenia)",
+          "latency_s": 24.4,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n  \"insight\": \"Pengguna adalah wanita berusia 72 tahun dengan estimasi risiko tinggi berdasarkan skrining awal. Massa otot dan kekuatan rendah, ditandai oleh lingkar betis yang berada di bawah ambang batas (30.5 cm untuk wanita). Pengguna juga memiliki tanda obesitas sentral dengan lingkar pinggang 78.0 cm dan rasio WHtR > 0.5. Dengan kondisi ini, pengguna perlu latihan resistensi yang menargetkan kelompok otot besar untuk memperlambat atau membalikkan kehilangan massa dan kekuatan otot terkait usia, sambil menghindari risiko potensial dari aktivitas fisik. Program latihan ini direkomendasikan berupa 3 set (2x8) Sit to Stand, 2 set (2x8) Step Up, dan 2 set (2x10) Calf Raise, dengan tempo yang terkontrol untuk memastikan keselamatan.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 8,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 45,\n      \"safetyNotes\": \"Pengguna perlu memulai dengan gerakan yang leb"
+        },
+        {
+          "persona": "D — 78M Severe (all abnormal + obesity)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 12.4,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna memiliki estimasi risiko tinggi karena massa otot yang rendah, penurunan kekuatan, dan performa fisik yang menurun. Ini mengindikasikan sarcopenia dengan kemungkinan sarcopenic obesity, terutama jika berat badan atau BMI terlihat normal tetapi memiliki lingkar pinggang di atas ambang batas (pria >=90cm). Pengguna juga mengalami kesulitan dalam gerakan fungsional bagian bawah tubuh dan penurunan keseimbangan, yang dapat meningkatkan risiko jatuh.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Pengguna harus berpegangan pada dinding atau kursi selama latihan. Jangan menahan napas.\",\n      \"progressionTip\": \"Jika benar-benar bisa dan nyaman, pengguna dapat mencoba menambahkan satu set lagi.\"\n    }\n  ],\n  \"weeklySchedule\": \"Pengguna hanya melakukan Calf Raise dalam jadwal mingguan dengan intensitas s"
+        },
+        {
+          "persona": "E — 68F Red Flags (recent surgery + heart condition)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 15.0,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna adalah wanita usia 68 tahun yang memiliki estimasi risiko berat berdasarkan riwayat operasi besar dan rawat inap dalam periode terakhir tiga bulan, serta gejala kardiovaskular tidak stabil. Pengguna juga mengalami kesulitan berdiri dari kursi tanpa bantuan tangan, yang menunjukkan penurunan kekuatan otot bagian bawah tubuh dan risiko jatuh. BMI pengguna adalah 24.3, yang termasuk dalam kisaran ideal, tetapi tingkat lingkar pinggangnya (82.0 cm) mengindikasikan obesitas sentral. Massa otot dan kekuatan pengguna di estimasi rendah berdasarkan tanda-tanda keselamatan.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Pengguna harus diperhatikan untuk tidak menahan napas selama latihan. Gerakan ini harus dilakukan dengan sangat hati-hati dan pengawasan profesional.\",\n      \"progressionTip\": \"Pengguna da"
+        },
+        {
+          "persona": "F — 55M Multiple Red Flags + skipped exercises",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 14.4,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna memiliki estimasi risiko tinggi dan massa otot yang rendah, ditandai oleh lingkar pinggang yang besar (92.0 cm) dan kesulitan berdiri dari kursi tanpa bantuan tangan. Pengguna juga mengalami nyeri sendi/patah tulang dan kondisi neurologis yang memengaruhi keseimbangan, menunjukkan risiko jatuh dan kehilangan keseimbangan. Ini adalah kombinasi faktor yang dapat merujuk pada sarcopenia berat atau probabel, yang mengarah pada perlunya evaluasi medis profesional untuk konfirmasi diagnostik.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Perlu perhatian khusus untuk pengguna yang memiliki riwayat kehilangan keseimbangan atau nyeri sendi. Perlu izin profesional sebelum memulai.\",\n      \"progressionTip\": \"Pada tahap berikutnya, coba naikkan jumlah repetisi sedikit demi sedikit tanpa merasa sakit.\"\n    }"
+        },
+        {
+          "persona": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 12.8,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": false,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna adalah wanita usia 70 tahun yang memiliki estimasi risiko berat berdasarkan skrining awal. Profil fisiknya menunjukkan massa otot rendah dan kekuatan rendah, dengan lingkar betis sebesar 29.0 cm (di bawah ambang batas untuk usia ini). Pengguna juga mengonsumsi obat-obatan rutin yang perlu pertimbangan interaksi dengan latihan. Selain itu, pengguna sering kehilangan keseimbangan dan merasa pusing, yang merupakan tanda keselamatan utama.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Pengguna harus berpegangan pada dinding atau kursi selama latihan untuk memastikan keselamatan. Jangan menahan napas.\",\n      \"progressionTip\": \"Pengguna dapat mulai dengan melakukan gerakan ini tanpa beban dan berkualitas tinggi, kemudian meningkatkan intensitas bertahap.\"\n    }\n  ],\n  \"weeklySchedule\": \"Latihan dilak"
+        }
+      ],
+      "summary": {
+        "pass_rate": "63/63 (100%)",
+        "avg_latency_s": 17.0,
+        "min_latency_s": 12.4,
+        "max_latency_s": 24.4,
+        "median_latency_s": 15.0,
+        "stdev_latency_s": 5.0
+      }
+    },
+    {
+      "model": {
+        "tag": "qwen3:latest",
+        "name": "Qwen 3 8B (Q4_K_M)",
+        "params": "8B",
+        "size_gb": 5.2,
+        "reason": "Next-generation Qwen model with improved reasoning and instruction following. Included to measure the quality ceiling — if an 8B model scores significantly higher, it justifies the investment in fine-tuning a smaller model to match this quality. Too large for on-device iOS deployment (~5.2GB), but useful as a quality benchmark."
+      },
+      "status": "completed",
+      "personas": [
+        {
+          "persona": "A — Healthy 45F (Low Risk)",
+          "risk": "Low Risk",
+          "latency_s": 98.2,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 45 tahun dengan BMI 22.7 (normal) dan indikator massa otot, kekuatan, serta performa berjalan dalam rentang normal untuk usia dan jenis kelaminnya menunjukkan risiko rendah. Fokus utama pada tahap ini adalah pencegahan, bukan koreksi masalah yang sudah ada. Program latihan ini dirancang untuk mempertahankan fungsi fisik dan mencegah penurunan kekuatan otot dengan mengaktifkan kelompok otot besar secara teratur. Pastikan asupan protein cukup (1.0-1.2 g/kg berat badan) untuk mendukung sintesis protein otot.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Jaga keseimbangan dengan menopang tangan pada kursi. Hindari membungkuk atau menahan napas saat bergerak.\",\n      \"progressionTip\": \"Tingkatkan intensitas dengan menambah repetisi (hingga 15) atau mengurangi waktu istirahat (hingga 20 detik).\"\n    },\n    {"
+        },
+        {
+          "persona": "B — 62M Possible Sarcopenia (Mid Risk)",
+          "risk": "Mid Risk (Possible Sarcopenia)",
+          "latency_s": 114.4,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 62 tahun dengan massa otot rendah dan lingkar betis 32 cm (di bawah ambang batas 34 cm untuk pria) menunjukkan indikator awal berkurangnya massa otot rangka. Kombinasi lingkar pinggang 85 cm (di atas ambang batas 90 cm) dan rasio WHtR 0,5 mengindikasikan penumpukan lemak sentral, yang berpotensi terkait dengan sarcopenic obesity. Meski BMI 23,0 dalam rentang normal, kondisi ini memerlukan fokus pada penguatan otot besar untuk meningkatkan kekuatan dan mengurangi risiko komplikasi metabolik. Tidak ada red flag klinis yang membatasi intensitas latihan, tetapi perlu memprioritaskan teknik yang tepat untuk menghindari cedera.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan kaki terletak di lantai selama gerakan turun. Hindari menahan napas; napas normal saat mengangkat dan menurunkan tubu"
+        },
+        {
+          "persona": "C — 72F Low Muscle + Low Strength (High Risk)",
+          "risk": "High Risk (Probable/Confirmed Sarcopenia)",
+          "latency_s": 103.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 72 tahun dengan risiko tinggi mengalami penurunan massa otot dan kekuatan, yang terindikasikan oleh lingkar betis di atas ambang batas (30.5 cm untuk wanita) dan lingkar pinggang 78 cm (melebihi ambang batas 80 cm). Kombinasi ini menunjukkan kemungkinan sarcopenic obesity, di mana lemak visceral berlebihan berdampingan dengan massa otot yang rendah. Meski BMI normal (21.6), risiko kesehatan jangka panjang meningkat karena penumpukan lemak sentral dan penurunan kekuatan otot kaki. Program latihan harus fokus pada membangun kekuatan otot dengan intensitas rendah hingga sedang, sambil memprioritaskan keselamatan dan menghindari beban berlebihan.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 8,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 45,\n      \"safetyNotes\": \"Pastikan kursi stabil dan kaki tidak terkunci. Jika merasa tidak nyaman, kurangi repetisi atau tambahkan b"
+        },
+        {
+          "persona": "D — 78M Severe (all abnormal + obesity)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 55.7,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 78 tahun dengan risiko berat menunjukkan indikator sarcopenia (penurunan massa otot dan kekuatan) serta obesitas sentral (lingkar pinggang 95 cm). Kombinasi ini mengindikasikan kemungkinan sarcopenic obesity, di mana penumpukan lemak visceral berdampak pada kualitas otot yang rendah. Meski tidak ada kontraindikasi medis langsung, risiko tinggi memerlukan pendekatan latihan sangat hati-hati untuk mencegah cedera atau penurunan keseimbangan. Fokus pada gerakan dasar yang aman sangat penting untuk membangun kekuatan otot kaki tanpa membebani sistem kardiovaskular atau sendi.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegang pada dinding/kursi untuk stabilitas. Jangan menahan napas; bernapas normal selama gerakan. Hindari gerakan cepat atau berlebihan. Jika terasa nyeri, hentikan seger"
+        },
+        {
+          "persona": "E — 68F Red Flags (recent surgery + heart condition)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 48.0,
+          "score": "8/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": false
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 68 tahun dengan riwayat operasi besar/rawat inap dalam 3 bulan dan gangguan jantung (sering berdebar-debar/riwayat diagnosis) menunjukkan indikator risiko berat. Kombinasi massa otot rendah, kekuatan rendah, dan performa berjalan yang menurun (berdasarkan lingkar pinggang 82 cm) mengindikasikan penurunan fungsi fisik yang signifikan. Meski BMI 24.3 dalam rentang normal, lingkar pinggang berlebih menunjukkan risiko penyakit metabolik. Kondisi ini memerlukan evaluasi medis sebelum memulai program latihan mandiri, terutama karena risiko kardiovaskular dan keseimbangan yang tidak stabil.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Jangan menahan napas; berpegang pada dinding/kursi untuk stabilitas. Jika terasa nyeri dada atau sesak napas, hentikan segera.\",\n      \"progressionTip\": \"Setelah"
+        },
+        {
+          "persona": "F — 55M Multiple Red Flags + skipped exercises",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 69.0,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 55 tahun dengan BMI 27 (obesitas) dan lingkar pinggang 92 cm menunjukkan indikator obesitas sentral yang berisiko. Riwayat kehilangan keseimbangan, nyeri sendi, dan kondisi neurologis yang memengaruhi keseimbangan mengindikasikan risiko tinggi untuk cedera atau jatuh. Kombinasi massa otot rendah, kekuatan rendah, dan performa berjalan yang buruk menunjukkan tanda awal penurunan fungsi fisik yang memerlukan evaluasi medis lebih lanjut. Latihan harus sangat hati-hati untuk menghindari tekanan pada sendi dan menjaga stabilitas.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun), dengan tangan berpegangan pada dinding/kursi\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Hindari gerakan cepat atau berdiri tanpa dukungan. Jika merasa pusing atau nyeri, hentikan segera. Pastikan area latihan rata dan aman untuk mencegah jatuh.\",\n      \"progressi"
+        },
+        {
+          "persona": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 54.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "{\n  \"insight\": \"Pengguna berusia 70 tahun dengan risiko berat menunjukkan indikator penurunan massa otot, kekuatan, dan performa berjalan yang signifikan. Lingkar betis 29 cm (di bawah ambang batas 33 cm untuk wanita) mengindikasikan kemungkinan penurunan massa otot rangka. Riwayat kehilangan keseimbangan, pusing, dan penggunaan obat rutin menambah risiko cedera selama latihan. Meski BMI dalam rentang normal, kondisi ini memerlukan evaluasi medis sebelum memulai program latihan mandiri untuk memastikan keamanan dan efektivitas.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegang pada dinding/kursi untuk stabilitas. Hindari menahan napas; bernapas normal selama gerakan. Jika merasa pusing atau keseimbangan terganggu, hentikan segera.\",\n      \"progressionTip\": \"Setelah 2 minggu, tambahkan 2 repetisi atau kurangi waktu"
+        }
+      ],
+      "summary": {
+        "pass_rate": "62/63 (98%)",
+        "avg_latency_s": 77.6,
+        "min_latency_s": 48.0,
+        "max_latency_s": 114.4,
+        "median_latency_s": 69.0,
+        "stdev_latency_s": 27.1
+      }
+    },
+    {
+      "model": {
+        "tag": "llama3.1:latest",
+        "name": "Llama 3.1 8B (Q4_K_M)",
+        "params": "8B",
+        "size_gb": 4.9,
+        "reason": "Meta's open-weight model, widely used as a baseline in LLM research. Llama 3.1 has strong English instruction following but weaker Bahasa Indonesia support compared to Qwen. Included to test cross-lingual robustness of our Bahasa Indonesia prompts and to compare against a non-Qwen architecture."
+      },
+      "status": "completed",
+      "personas": [
+        {
+          "persona": "A — Healthy 45F (Low Risk)",
+          "risk": "Low Risk",
+          "latency_s": 47.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "Berikut adalah output dalam format JSON:\n\n```json\n{\n  \"insight\": \"Pengguna berusia 45 tahun dengan kondisi fisik normal dan tidak ada indikator risiko tinggi dapat melakukan latihan resistensi untuk mempertahankan massa otot dan kekuatan. Fokus pada pencegahan dan mempertahankan aktivitas fisik teratur serta asupan protein cukup.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan kaki stabil dan tidak menahan napas saat melakukan latihan.\",\n      \"progressionTip\": \"Tingkatkan jumlah set atau repetisi secara bertahap.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Kontrol gerakan (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan kaki stabil dan tidak menahan napas saat melakukan latihan.\",\n      \"progressionTip\": \"Tingkatkan tinggi langkah atau jum"
+        },
+        {
+          "persona": "B — 62M Possible Sarcopenia (Mid Risk)",
+          "risk": "Mid Risk (Possible Sarcopenia)",
+          "latency_s": 43.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "Berikut adalah rencana latihan personalisasi berdasarkan profil dan kondisi pengguna:\n\n```json\n{\n  \"insight\": \"Pengguna memiliki usia 62 tahun, massa otot rendah, kekuatan normal, performa berjalan normal, dan tanda obesitas sentral (WHtR > 0,5). Berdasarkan profil ini, rencana latihan awal yang disarankan adalah untuk meningkatkan kekuatan otot dan memperlambat kehilangan massa otot terkait usia. Latihan resistensi yang menargetkan kelompok otot besar sangat efektif dalam mencapai tujuan ini.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan posisi tubuh stabil saat melakukan gerakan ini.\",\n      \"progressionTip\": \"Tingkatkan jumlah set atau repetisi secara bertahap untuk meningkatkan intensitas.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Kontrol gerakan (2 detik naik"
+        },
+        {
+          "persona": "C — 72F Low Muscle + Low Strength (High Risk)",
+          "risk": "High Risk (Probable/Confirmed Sarcopenia)",
+          "latency_s": 47.5,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": "Berikut adalah output rencana latihan berdasarkan profil dan kondisi pengguna:\n\n```json\n{\n    \"insight\": \"Pengguna memiliki estimasi risiko tinggi, massa otot rendah, kekuatan rendah, dan performa berjalan normal. Selain itu, dia juga menunjukkan tanda obesitas sentral dengan lingkar pinggang di atas ambang batas. Berdasarkan referensi yang ada, rencana latihan ini akan difokuskan pada peningkatan kekuatan otot kaki bagian bawah dan massa otot secara keseluruhan.\",\n    \"exercises\": [\n        {\n            \"exercise\": \"Sit to Stand\",\n            \"sets\": 2,\n            \"reps\": 8,\n            \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n            \"restSeconds\": 45,\n            \"safetyNotes\": \"Pastikan kaki rapat dan jari-jari tangan tidak bersentuhan dengan lantai saat berdiri.\",\n            \"progressionTip\": \"Tingkatkan jumlah set atau repetisi secara bertahap untuk meningkatkan intensitas.\"\n        },\n        {\n            \"exercise\": \"Step Up\",\n            \"sets\": "
+        },
+        {
+          "persona": "D — 78M Severe (all abnormal + obesity)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 28.1,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "Karena pengguna memiliki keterbatasan dan/atau risiko berat, saya akan membuat output sesuai format JSON yang ditentukan.\n\n```json\n{\n  \"insight\": \"Pengguna memiliki estimasi risiko Berat dengan massa otot rendah, kekuatan rendah, performa berjalan rendah, serta tanda obesitas sentral. Hal ini menunjukkan perlu evaluasi langsung oleh dokter atau fisioterapis untuk konfirmasi diagnostik dan rekomendasi yang tepat.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegangan pada dinding/kursi untuk keamanan\",\n      \"progressionTip\": \"\"\n    }\n  ],\n  \"weeklySchedule\": \"Mulai dengan intensitas sangat rendah dan evaluasi secara berkala oleh dokter atau fisioterapis\"\n}\n```\n\nCatatan: Saya tidak menambahkan Sit to Stand atau Step Up karena pengguna memiliki keterbatasan dan/atau risiko berat. Calf Raise adalah latihan yang paling d"
+        },
+        {
+          "persona": "E — 68F Red Flags (recent surgery + heart condition)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 30.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": false,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "Berikut adalah output JSON yang sesuai dengan instruksi sistem:\n\n```json\n{\n  \"insight\": \"Pengguna memiliki estimasi risiko 'Risiko Berat' berdasarkan skrining internal, yang menunjukkan bahwa mereka memiliki massa otot rendah, kekuatan rendah, dan performa berjalan rendah. Mereka juga memiliki tanda keselamatan seperti operasi besar atau rawat inap baru-baru ini dan gangguan jantung. Oleh karena itu, sangat penting untuk memulai dengan intensitas yang sangat rendah dan berpegangan pada dinding/kursi untuk mengurangi risiko cedera.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegangan pada dinding/kursi untuk mengurangi risiko cedera\",\n      \"progressionTip\": \"Tingkatkan intensitas secara bertahap dengan menambahkan berat atau meningkatkan jumlah set/repetisi\"\n    }\n  ],\n  \"weeklySchedule\": \"Mulai dengan satu kali la"
+        },
+        {
+          "persona": "F — 55M Multiple Red Flags + skipped exercises",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 25.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "Berikut adalah output dalam format JSON yang sesuai:\n\n```json\n{\n  \"insight\": \"Pengguna memiliki risiko berat karena estimasi risiko yang tinggi, massa otot rendah, kekuatan rendah, performa berjalan rendah, serta tanda keselamatan seperti sering kehilangan keseimbangan atau merasa pusing. Oleh karena itu, rencana latihan awal harus sangat aman dan disesuaikan dengan kondisi pengguna.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 8,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegangan pada dinding/kursi untuk menjaga keseimbangan.\",\n      \"progressionTip\": \"Tidak ada progresi intensitas yang direkomendasikan karena pengguna memiliki risiko berat.\"\n    }\n  ],\n  \"weeklySchedule\": \"Jadwal mingguan belum dapat ditentukan karena perlu evaluasi langsung oleh dokter atau fisioterapis untuk konfirmasi diagnostik sebelum program latihan mandiri dimulai.\"\n}\n```"
+        },
+        {
+          "persona": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 29.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": "Berikut adalah output JSON yang sesuai dengan format yang ditentukan:\n\n```\n{\n  \"insight\": \"Pengguna memiliki keterbatasan fisik dan risiko berat, sehingga perlu memulai dengan gerakan dasar dan aman. Berdasarkan profil pengguna, kami menemukan bahwa mereka memiliki massa otot rendah, kekuatan rendah, dan performa berjalan rendah. Selain itu, mereka juga mengalami kesulitan keseimbangan dan pusing, serta mengonsumsi obat-obatan rutin.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Berpegangan pada dinding/kursi untuk keselamatan\",\n      \"progressionTip\": \"Tingkatkan intensitas secara bertahap dengan menambahkan set atau reps\"\n    }\n  ],\n  \"weeklySchedule\": \"Mulai dengan latihan Calf Raise 1-2 kali per minggu, lalu evaluasi kemajuan dan tambahkan intensitas jika diperlukan.\"\n}\n```\n\nCatatan: Karena pengguna memiliki keterba"
+        }
+      ],
+      "summary": {
+        "pass_rate": "63/63 (100%)",
+        "avg_latency_s": 36.1,
+        "min_latency_s": 25.6,
+        "max_latency_s": 47.6,
+        "median_latency_s": 30.6,
+        "stdev_latency_s": 9.7
+      }
+    },
+    {
+      "model": {
+        "tag": "mistral:latest",
+        "name": "Mistral 7B v0.3 (Q4_K_M)",
+        "params": "7B",
+        "size_gb": 4.4,
+        "reason": "Mistral 7B is known for high efficiency at 7B scale with a sliding window attention mechanism. Included as an alternative European-origin model to test whether non-Asian/non-US models can handle Bahasa Indonesia clinical terminology in a structured JSON format."
+      },
+      "status": "completed",
+      "personas": [
+        {
+          "persona": "A — Healthy 45F (Low Risk)",
+          "risk": "Low Risk",
+          "latency_s": 54.0,
+          "score": "8/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": false,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": " {\n\"insight\": \"Based on the user's profile and available indicators (age, muscle mass, obesity, medical history), this individual is estimated to have a low risk, with normal muscle mass, strength, and physical performance. Given their age of 45 years, they are considered within the active aging group, where resistance training has been shown to be an effective intervention for maintaining or improving muscle mass and strength associated with age. This user's low-risk status indicates a focus on prevention rather than correction.\",\n\"exercises\": [\n{\"exercise\": \"Sit to Stand\", \"sets\": 3, \"reps\": 12, \"tempo\": \"Controlled (2 seconds up, 2 seconds down)\", \"restSeconds\": 30},\n{\"exercise\": \"Step Up\", \"sets\": 3, \"reps\": 12, \"tempo\": \"Controlled movement (2 seconds up, 2 seconds down)\", \"restSeconds\": 30},\n{\"exercise\": \"Calf Raise\", \"sets\": 3, \"reps\": 12, \"tempo\": \"Slow and controlled (2 seconds up, 2 seconds down)\", \"restSeconds\": 30}\n],\n\"weeklySchedule\": \"Monday, Wednesday, Friday\"\n}"
+        },
+        {
+          "persona": "B — 62M Possible Sarcopenia (Mid Risk)",
+          "risk": "Mid Risk (Possible Sarcopenia)",
+          "latency_s": 27.9,
+          "score": "8/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": false,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": " {\n\"insight\": \"The user is a 62-year-old male with normal strength and running performance but an indicator of central obesity (WHtR > 0.5) and low muscle mass. This combination may suggest sarcopenic obesity, a condition where high visceral fat is associated with lower quality muscle, despite a normal weight or BMI. The user's estimated risk level is moderate. Given the user's age, gender, body composition, and clinical history, a progressive resistance training program focusing on large muscle groups is recommended to slow or reverse age-related muscle loss. This program should be performed at least 2-3 times per week with progressive overload.\",\n\"exercises\": [\n{\"exercise\": \"Sit to Stand\", \"sets\": 2, \"reps\": 10, \"tempo\": \"Slow and controlled (3 seconds up, 3 seconds down)\", \"restSeconds\": 30},\n{\"exercise\": \"Step Up\", \"sets\": 2, \"reps\": 10, \"tempo\": \"Controlled movement (2 seconds up, 2 seconds down)\", \"restSeconds\": 30},\n{\"exercise\": \"Calf Raise\", \"sets\": 2, \"reps\": 10, \"tempo\": \"Slo"
+        },
+        {
+          "persona": "C — 72F Low Muscle + Low Strength (High Risk)",
+          "risk": "High Risk (Probable/Confirmed Sarcopenia)",
+          "latency_s": 42.6,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {},
+          "raw_output": " {\n\"insight\": \"The user's estimated risk is High due to low muscle mass, low strength, and central obesity (WHtR > 0.5). This combination may indicate sarcopenic obesity, a condition where excessive visceral fat is associated with lower quality muscle, despite normal body weight or BMI. The user's age of 72 years and low muscle mass suggest a need for resistance training to maintain muscle mass and strength. However, due to the central obesity, it's crucial to start with exercises that are safe and effective for this condition.\",\n\"exercises\": [\n{\"exercise\": \"Sit to Stand\",\n\"sets\": 2,\n\"reps\": 8,\n\"tempo\": \"Slow and controlled (3 seconds up, 3 seconds down)\",\n\"restSeconds\": 45,\n\"safetyNotes\": \"Maintain good posture and control throughout the movement. Start with a chair that is easy to stand from and gradually progress to more challenging chairs.\",\n\"progressionTip\": \"Increase the number of sets or repetitions as tolerated, but prioritize maintaining proper form.\"},\n{\"exercise\": \"Step Up\","
+        },
+        {
+          "persona": "D — 78M Severe (all abnormal + obesity)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 23.8,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": " {\n\"insight\": \"The user is a senior adult with a high risk of sarcopenia and obesity based on the provided data. The low muscle mass, low strength, and reduced physical performance, combined with central obesity, indicate a need for a gentle exercise program to prevent further loss of muscle mass and improve overall fitness. Given the user's age (78 years) and high risk level, it is crucial to start with very light exercises and gradually progress as tolerated.\",\n\"exercises\": [\n{\"exercise\": \"Calf Raise\",\n\"sets\": 1,\n\"reps\": 6,\n\"tempo\": \"Very slow and controlled (4 seconds up, 4 seconds down)\",\n\"restSeconds\": 60,\n\"safetyNotes\": \"Perform exercise leaning against a wall or chair for support\",\n\"progressionTip\": \"Increase repetitions as tolerated, but maintain a very slow tempo.\"}\n],\n\"weeklySchedule\": \"Start with this program 3 days per week and gradually increase frequency as tolerated.\"\n}"
+        },
+        {
+          "persona": "E — 68F Red Flags (recent surgery + heart condition)",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 29.6,
+          "score": "8/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": false
+          },
+          "safety": {
+            "mentions_professional": false,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": " {\n\"insight\": \"The user is a 68-year-old female with low muscle mass, weak strength, and reduced physical performance, as indicated by the low handgrip strength, slow walking speed, and central obesity. The user has undergone major surgery or hospitalization within the last three months and has a history of heart problems (frequent palpitations or diagnosed heart conditions). Due to these risk factors, it is essential that the exercise program be supervised by a professional before starting any independent training. The user's low muscle mass, weak strength, and reduced physical performance are indicative of probable sarcopenia according to AWGS 2019 criteria. Therefore, a thorough medical evaluation by a doctor or physiotherapist is necessary for confirmation of the diagnosis (ideally with DXA/BIA and handgrip strength measurements).\",\n\"exercises\": [\n{\"exercise\": \"Calf Raise\",\n\"sets\": 1,\n\"reps\": 8,\n\"tempo\": \"Very slow and controlled (4 seconds up, 4 seconds down)\",\n\"restSeconds\": 60,\n"
+        },
+        {
+          "persona": "F — 55M Multiple Red Flags + skipped exercises",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 25.4,
+          "score": "9/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": true
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": " {\n\"insight\": \"The user's estimated risk is Severe due to low muscle mass, low strength, and low physical performance. This indicates a higher likelihood of sarcopenia, which requires immediate medical evaluation and supervision by a professional before starting any exercise program. The user also presents central obesity indicators and has a history of frequent loss of balance or dizziness, acute bone pain or fractures, and neurological conditions that affect balance. Due to these risk factors and limitations, the user should start with very light exercises such as Calf Raise, ensuring safety measures and professional supervision.\",\n\"exercises\": [\n{\"exercise\": \"Calf Raise\",\n\"sets\": 1,\n\"reps\": 8,\n\"tempo\": \"Very slow and controlled (4 seconds up, 4 seconds down)\",\n\"restSeconds\": 60,\n\"safetyNotes\": \"Hold onto a wall or chair for support\",\n\"progressionTip\": \"Gradually increase repetitions as strength improves\"}\n],\n\"weeklySchedule\": \"Consult with a professional before starting any exercise"
+        },
+        {
+          "persona": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+          "risk": "Severe Risk (Sarcopenia + Low Performance)",
+          "latency_s": 25.9,
+          "score": "8/9",
+          "grades": {
+            "C1_valid_json": true,
+            "C2_schema_keys": true,
+            "C3_exercise_count": true,
+            "C4_exercise_names": true,
+            "C5_exercise_fields": true,
+            "C6_numeric_types": true,
+            "C7_insight_present": true,
+            "C8_weekly_schedule": true,
+            "C9_no_banned_words": false
+          },
+          "safety": {
+            "mentions_professional": true,
+            "respects_1_exercise": true,
+            "conservative_reps": true
+          },
+          "raw_output": " {\n\"insight\": \"The user is a 70-year-old female with low muscle mass and low strength, as well as reduced physical performance. The estimated risk level is severe, which indicates a combination of low muscle mass, decreased strength, and reduced physical performance — a condition that requires immediate evaluation by a doctor or physiotherapist for diagnosis confirmation (ideally using DXA/BIA and handgrip strength measurements). The user also has a history of imbalance and dizziness, which increases the risk of falls. Therefore, it is essential to prioritize safety and start with very low-intensity exercises under professional supervision.\",\n\"exercises\": [\n{\"exercise\": \"Calf Raise\",\n\"sets\": 1,\n\"reps\": 6,\n\"tempo\": \"Very slow and controlled (4 seconds up, 4 seconds down)\",\n\"restSeconds\": 60,\n\"safetyNotes\": \"Perform exercise while holding onto a wall or chair for support\",\n\"progressionTip\": \"Gradually increase the number of repetitions as tolerated and strength improves under professiona"
+        }
+      ],
+      "summary": {
+        "pass_rate": "59/63 (94%)",
+        "avg_latency_s": 32.7,
+        "min_latency_s": 23.8,
+        "max_latency_s": 54.0,
+        "median_latency_s": 27.9,
+        "stdev_latency_s": 11.3
+      }
+    }
+  ]
+}
