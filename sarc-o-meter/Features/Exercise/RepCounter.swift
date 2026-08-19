@@ -128,7 +128,7 @@ private final class RepetitionDetector {
                    minRepInterval: 0.5, calibrationRelax: 0.01)
         }
         static func calfRaise() -> Config {
-            Config(minRange: 0.065, lowRatioThreshold: 0.25, highRatioThreshold: 0.65,
+            Config(minRange: 0.040, lowRatioThreshold: 0.25, highRatioThreshold: 0.40,
                    minRepInterval: 1.0, calibrationRelax: 0.01)
         }
     }
@@ -493,12 +493,25 @@ final class RepCounter: ObservableObject {
         }
     }
 
-    /// Memastikan bagian tubuh utama (bahu, pinggul, lutut) terdeteksi oleh kamera
+    /// Memastikan seluruh skeleton tubuh (bahu, pinggul, lutut, dan pergelangan kaki)
+    /// terdeteksi lengkap dan berada di DALAM batas frame kamera (0.01 ... 0.99).
     private func isBodyVisible(_ p: [NormalizedLandmark]) -> Bool {
-        guard p.count >= 27 else { return false }
+        guard p.count >= 29 else { return false }
         let vMin: Float = 0.20
-        let leftBody  = vis(p, 11) >= vMin && vis(p, 23) >= vMin && vis(p, 25) >= vMin
-        let rightBody = vis(p, 12) >= vMin && vis(p, 24) >= vMin && vis(p, 26) >= vMin
+
+        func inBounds(_ lm: NormalizedLandmark) -> Bool {
+            let x = Double(lm.x), y = Double(lm.y)
+            return (0.01...0.99).contains(x) && (0.01...0.99).contains(y)
+        }
+
+        let leftBody  = vis(p, 11) >= vMin && vis(p, 23) >= vMin &&
+                          vis(p, 25) >= vMin && vis(p, 27) >= vMin &&
+                          inBounds(p[11]) && inBounds(p[23]) && inBounds(p[25]) && inBounds(p[27])
+
+        let rightBody = vis(p, 12) >= vMin && vis(p, 24) >= vMin &&
+                           vis(p, 26) >= vMin && vis(p, 28) >= vMin &&
+                           inBounds(p[12]) && inBounds(p[24]) && inBounds(p[26]) && inBounds(p[28])
+
         return leftBody || rightBody
     }
 
