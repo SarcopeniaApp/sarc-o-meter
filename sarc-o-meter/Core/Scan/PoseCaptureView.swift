@@ -21,95 +21,96 @@ struct PoseCaptureView: View {
         PageWrapper(
             title: "Scan Tubuh",
             content: {
-                VStack(spacing: 24) {
-                    ZStack {
-                        CameraPreview(session: camera.session)
-                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        
-                        // Pose guide: shows humanpose.png for front pose, and PoseGuideSide for side pose.
-                        // It serves as a visual guide overlay on top of the camera feed.
-                        if camera.phase == .front {
-                            Image("humanpose")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .foregroundStyle(Color.yellow)
-                                .padding(.vertical, 24)
-                                .opacity(camera.bodyVisible ? 0.35 : 0.75)
-                                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
-                                .animation(.easeInOut(duration: 0.2), value: camera.phase)
-                                .allowsHitTesting(false)
-                        } else {
-                            Image("sidepose")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .foregroundStyle(Color.yellow)
-                                .padding(.vertical, 24)
-                                .opacity(camera.bodyVisible ? 0.35 : 0.75)
-                                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
-                                .animation(.easeInOut(duration: 0.2), value: camera.phase)
-                                .allowsHitTesting(false)
-                        }
-
-                        
-                        // Animated progress border filling from top clockwise
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .trim(from: 0, to: camera.poseDetected ? camera.progress : 0)
-                            .stroke(frameBorderColor, style: StrokeStyle(lineWidth: 24, lineCap: .round))
-                            .animation(.linear(duration: 0.1), value: camera.progress)
-                            .animation(.easeInOut(duration: 0.25), value: frameBorderColor)
-                        
-                        if !camera.authorized {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(.black.opacity(0.8))
-                            Text("Akses kamera diperlukan.\nAktifkan di Pengaturan.")
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.white)
-                        }
-
-                        
-                        // Success transition overlay: green background + loading animation for 2s
-                        if camera.isTransitioning {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .fill(Color.green)
-                                
-                                VStack(spacing: 16) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 60, weight: .bold))
-                                        .foregroundStyle(.white)
-                                    
-                                    ProgressView()
-                                        .tint(.white)
-                                        .controlSize(.large)
-                                    
-                                    Text("Berhasil Dipindai!")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundStyle(.white)
-                                    
-                                    Text(camera.phase == .front ? "Menyiapkan pindai tubuh samping..." : "Memproses hasil...")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(.white.opacity(0.9))
+                GeometryReader { geo in
+                    let availableHeight = geo.size.height
+                    let targetHeight = (VPW - 48) * 1.72
+                    let frameHeight = min(targetHeight, availableHeight > 0 ? availableHeight : targetHeight)
+                    
+                    VStack(spacing: 0) {
+                        ZStack {
+                            CameraPreview(session: camera.session)
+                                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                            
+                            // Pose guide: shows humanpose.png for front pose, and sidepose for side pose.
+                            // Positioned aligned to top and scaled down to leave space for bottom instructions overlay.
+                            VStack {
+                                Group {
+                                    if camera.phase == .front {
+                                        Image("humanpose")
+                                            .renderingMode(.template)
+                                            .resizable()
+                                            .scaledToFit()
+                                    } else {
+                                        Image("sidepose")
+                                            .renderingMode(.template)
+                                            .resizable()
+                                            .scaledToFit()
+                                    }
                                 }
-                                .padding(24)
+                                .foregroundStyle(Color.yellow)
+                                .padding(.top, 20)
+                                .padding(.horizontal, 62)
+                                .opacity(camera.bodyVisible ? 0.35 : 0.75)
+                                .animation(.easeInOut(duration: 0.3), value: camera.bodyVisible)
+                                .animation(.easeInOut(duration: 0.2), value: camera.phase)
+                                .allowsHitTesting(false)
+                                
+                                Spacer(minLength: 120)
                             }
-                            .transition(.opacity)
-                            .animation(.easeInOut(duration: 0.3), value: camera.isTransitioning)
-                        }
-                    }
-                    .frame(width: VPW - 48, height: (VPW - 48) * 1.4)
 
-                    instructions
-                    
-                    //Spacer()
-                    
-                    // Footer
-                    Text(stepLabel)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.muted)
+                            
+                            // Animated progress border filling from top clockwise
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .trim(from: 0, to: camera.poseDetected ? camera.progress : 0)
+                                .stroke(frameBorderColor, style: StrokeStyle(lineWidth: 24, lineCap: .round))
+                                .animation(.linear(duration: 0.1), value: camera.progress)
+                                .animation(.easeInOut(duration: 0.25), value: frameBorderColor)
+                            
+                            if !camera.authorized {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(.black.opacity(0.8))
+                                Text("Akses kamera diperlukan.\nAktifkan di Pengaturan.")
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.white)
+                            }
+
+                            // Instruction text overlay inside camera frame (bottom position)
+                            overlayInstructions
+
+                            
+                            // Success transition overlay: green background + loading animation for 2s
+                            if camera.isTransitioning {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                        .fill(Color.green)
+                                    
+                                    VStack(spacing: 16) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 60, weight: .bold))
+                                            .foregroundStyle(.white)
+                                        
+                                        ProgressView()
+                                            .tint(.white)
+                                            .controlSize(.large)
+                                        
+                                        Text("Berhasil Dipindai!")
+                                            .font(.system(size: 18, weight: .bold))
+                                            .foregroundStyle(.white)
+                                        
+                                        Text(camera.phase == .front ? "Menyiapkan pindai tubuh samping..." : "Memproses hasil...")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.white.opacity(0.9))
+                                    }
+                                    .padding(24)
+                                }
+                                .transition(.opacity)
+                                .animation(.easeInOut(duration: 0.3), value: camera.isTransitioning)
+                            }
+                        }
+                        .frame(width: VPW - 48, height: frameHeight)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
-                .frame(width: .infinity)
             },
             scrollable: false,
             onBack: {
@@ -151,21 +152,30 @@ struct PoseCaptureView: View {
         }
     }
 
-    // MARK: Instruction text
+    // MARK: Overlay instruction text inside camera frame
 
-    private var instructions: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.title.bold())
-                .foregroundStyle(Theme.ink)
-            Text(camera.guidance)
-                .font(.system(size: 15))
-                .foregroundStyle(Theme.muted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 40)
+    private var overlayInstructions: some View {
+        VStack {
+            Spacer()
+            
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Text(camera.guidance)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(stepLabel)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
     }
-
-    
 }
