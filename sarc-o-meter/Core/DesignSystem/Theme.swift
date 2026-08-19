@@ -174,12 +174,13 @@ struct Subtitle: View {
     }
 }
 
-struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
+struct PageWrapper<Content: View, Footer: View, Trailing: View, TitleTrailing: View>: View {
     @Environment(\.safeAreaInsets) private var safeAreaInsets
     
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer?
     @ViewBuilder let trailing: Trailing
+    @ViewBuilder let titleTrailing: TitleTrailing
     
     private let onBack: (() -> Void)?
     private let title: String
@@ -196,11 +197,13 @@ struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer,
         @ViewBuilder trailing: () -> Trailing = { EmptyView() },
+        @ViewBuilder titleTrailing: () -> TitleTrailing = { EmptyView() },
         onBack: (() -> Void)? = nil
     ) {
         self.content = content()
         self.footer = footer()
         self.trailing = trailing()
+        self.titleTrailing = titleTrailing()
         self.onBack = onBack
         self.scrollable = true
         self.title = title
@@ -211,12 +214,14 @@ struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer = { EmptyView() },
         @ViewBuilder trailing: () -> Trailing = { EmptyView() },
+        @ViewBuilder titleTrailing: () -> TitleTrailing = { EmptyView() },
         scrollable: Bool = true,
         onBack: (() -> Void)? = nil
     ) {
         self.content = content()
         self.footer = nil
         self.trailing = trailing()
+        self.titleTrailing = titleTrailing()
         self.scrollable = scrollable
         self.onBack = onBack
         self.title = title
@@ -241,6 +246,7 @@ struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
                                 .foregroundStyle(Theme.ink)
                                 .lineLimit(1)
                             Spacer()
+                            self.titleTrailing
                         }
                         .zIndex(2)
                         
@@ -266,6 +272,7 @@ struct PageWrapper<Content: View, Footer: View, Trailing: View>: View {
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
                         Spacer()
+                        self.titleTrailing
                     }
                     .zIndex(2)
                     

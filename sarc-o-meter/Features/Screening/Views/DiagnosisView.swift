@@ -66,8 +66,6 @@ struct DiagnosisView: View {
             statusRow("Massa otot", result.muscleMassStatus)
             Divider().padding(.leading, 18)
             statusRow("Kekuatan", result.strengthStatus)
-            Divider().padding(.leading, 18)
-            statusRow("Performa berjalan", result.performanceStatus)
         }
         .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
         .shadow(color: Theme.cardShadow, radius: 8, y: 4)

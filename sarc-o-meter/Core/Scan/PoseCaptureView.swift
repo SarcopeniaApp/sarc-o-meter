@@ -98,11 +98,11 @@ struct PoseCaptureView: View {
                             .animation(.easeInOut(duration: 0.3), value: camera.isTransitioning)
                         }
                     }
-                    .frame(width: VPW - 48, height: (VPW - 48) * 1.2)
+                    .frame(width: VPW - 48, height: (VPW - 48) * 1.4)
 
                     instructions
                     
-                    Spacer()
+                    //Spacer()
                     
                     // Footer
                     Text(stepLabel)

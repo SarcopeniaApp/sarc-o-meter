@@ -99,12 +99,8 @@ enum RuleEngine {
             result.strengthStatus = .abnormal
         }
 
-        // Performance: functional mobility from the step-up.
-        if let step = user.stepUpReps {
-            result.performanceStatus = step < stepUpMin ? .abnormal : .normal
-        } else {
-            result.performanceStatus = .abnormal
-        }
+        // Performance: walking performance taken out.
+        result.performanceStatus = .notAssessed
 
         // Any skipped exercise → flag for direct professional evaluation.
         if user.sitToStandReps == nil || user.stepUpReps == nil || user.calfRaiseReps == nil {
@@ -114,20 +110,16 @@ enum RuleEngine {
         // 4. Combine into an overall risk category.
         let isLowMass = result.muscleMassStatus == .abnormal
         let isLowStrength = result.strengthStatus == .abnormal
-        let isLowPerformance = result.performanceStatus == .abnormal
 
         let allNormal = result.muscleMassStatus == .normal &&
-            (result.strengthStatus == .normal || result.strengthStatus == .notAssessed) &&
-            (result.performanceStatus == .normal || result.performanceStatus == .notAssessed)
+            (result.strengthStatus == .normal || result.strengthStatus == .notAssessed)
 
         if result.muscleMassStatus == .notAssessed {
             result.overallRisk = .unassessed
-        } else if isLowMass && isLowStrength && isLowPerformance {
+        } else if isLowMass && isLowStrength {
             result.overallRisk = .severe
-        } else if isLowMass && (isLowStrength || isLowPerformance) {
+        } else if isLowMass || isLowStrength {
             result.overallRisk = .high
-        } else if isLowMass || isLowStrength || isLowPerformance {
-            result.overallRisk = .mid
         } else if allNormal {
             result.overallRisk = .low
         } else {
