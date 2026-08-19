@@ -63,26 +63,29 @@ Because the app is operating exactly as designed by the stakeholder (prescribing
 
 ---
 
-## 5. Inference Performance (Qwen 2.5:3b)
+## 5. Multi-Model RAG Experiment (Model Selection for Fine-Tuning)
 
-Before transitioning to fine-tuning, we measured the baseline on-device inference latency using the current `Qwen 2.5:3b` model via Ollama. 
+To establish a performance baseline before fine-tuning and to validate our model choices, we ran a multi-model RAG experiment comparing 4 different architectures against the exact same iOS prompt pipeline and the 7 test personas.
 
-| Persona | Risk Level | Output Length | Inference Time |
-|---------|-----------|---------------|----------------|
-| A — Healthy 45F | Low | 3 Exercises | **19.1s** |
-| B — 62M Possible Sarcopenia | Mid | 3 Exercises | **20.0s** |
-| C — 72F Low Muscle + Low Strength | High | 3 Exercises | **22.3s** |
-| D — 78M Severe (all abnormal + obesity) | Severe | 1 Exercise | **14.1s** |
-| E — 68F Surgery + Heart Condition | Severe | 1 Exercise | **15.8s** |
-| F — 55M Balance/Dizziness + Skipped Tests | Severe | 1 Exercise | **12.1s** |
-| G — 70F Severe + Balance + Meds *(new)* | Severe | 1 Exercise | **13.8s** |
+| Model | Params | Size (GB) | Pass Rate (9 criteria) | Avg Latency (s) |
+|-------|--------|-----------|------------------------|-----------------|
+| **Qwen 2.5 3B** | 3B | 1.9 | **100%** (63/63) | **17.0s** |
+| Llama 3.1 8B | 8B | 4.9 | **100%** (63/63) | 36.1s |
+| Qwen 3 8B | 8B | 5.2 | 98% (62/63) | 77.6s |
+| Mistral 7B v0.3 | 7B | 4.4 | 94% (59/63) | 32.7s |
 
-**Performance Summary**:
-- **Average Latency (Full Plan - 3 Exercises)**: ~20.5 seconds
-- **Average Latency (Restricted Plan - 1 Exercise)**: ~13.9 seconds
-- **Overall Average**: ~16.7 seconds
+### Key Findings & Model Roles
 
-**Conclusion on Latency**:
-An inference time of 16–22 seconds is acceptable for an offline background task, but it presents a poor UX if the user is waiting on a loading screen in a mobile app. 
-- The large prompt size (RAG context + strict JSON rules) contributes to higher prefill latency.
-- Migrating to a fine-tuned **1.5B** or **0.5B** model would drastically reduce this inference time down to **1–4 seconds**, making the user experience much smoother on iOS devices.
+**1. Qwen 2.5 3B (Chosen as Base Model for iOS Deployment)**
+- **Why it was chosen**: Qwen 2.5 3B is the clear winner for on-device deployment. It achieved a perfect 100% pass rate in deterministic grading while having the fastest average latency (17.0s), which is 2x faster than the 7B/8B models. At just 1.9 GB (Q4_K_M quantization), it fits comfortably within the RAM limits of an iPhone. It also demonstrated the best native Bahasa Indonesia JSON compliance and instruction-following for this specific clinical use case.
+- **Next Steps**: Since 17s is still too slow for a seamless user experience (target: 1-4s), we will use the Qwen 2.5 family as our base and fine-tune a smaller **1.5B** variant specifically for JSON format and Bahasa Indonesia clinical guidelines.
+
+**2. Llama 3.1 8B (Chosen as LLM-as-a-Judge for Evaluation)**
+- **Why it was chosen**: Llama 3.1 8B achieved a perfect 100% pass rate in generating valid JSON, proving that its strong English instruction-following capabilities translate very well to complex Indonesian reasoning tasks. Because of its reliable logic and industry-standard reputation as a strong reasoning baseline, it is the perfect model to act as our **LLM-as-a-Judge** to evaluate the Qwen model's RAG outputs (Recall, Precision, Groundedness).
+- **Why it's not the base model**: At 4.9 GB and 36.1s average latency, it is simply too large and slow for on-device iOS execution. 
+
+**3. Qwen 3 8B (Not Chosen)**
+- **Why it was not chosen**: Despite being a next-generation model, it scored 98% because it failed the banned word check (C9) on Persona E by outputting the word "diagnosis". Furthermore, it had the worst latency by far (77.6s average), likely due to the overhead of its internal thinking/reasoning mode. At 5.2 GB, it is also too large for mobile deployment.
+
+**4. Mistral 7B v0.3 (Not Chosen)**
+- **Why it was not chosen**: Mistral 7B scored the lowest (94%) and exhibited multiple failure types. It missed mandatory exercise JSON fields (C5) on Personas A & B, and used banned words (C9) on Personas E & G. This confirms that its support for Bahasa Indonesia clinical terminology and strict structural adherence is weaker than Qwen's.
