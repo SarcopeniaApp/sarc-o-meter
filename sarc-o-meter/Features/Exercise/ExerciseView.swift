@@ -89,7 +89,7 @@ struct ExerciseView: View {
         PageWrapper(
             title: headline ?? counter.mode.rawValue,
             content: {
-                VStack(spacing: 24) {
+                VStack(spacing: 20) {
                     // Progress dots (only within the 3-exercise test).
                     if let stepIndex, let totalSteps {
                         HStack(spacing: 8) {
@@ -105,8 +105,8 @@ struct ExerciseView: View {
                         cameraFrame
                         
                         VStack(spacing: 0) {
-                            Spacer()
                             if case .countdown(let s) = counter.session {
+                                Spacer()
                                 VStack(spacing: 4) {
                                     Text("Mulai Dalam")
                                         .font(.title2.bold())
@@ -120,30 +120,41 @@ struct ExerciseView: View {
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 12)
                                 .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 20))
+                                .padding(.bottom, 24)
                             } else if case .running = counter.session {
+                                Spacer()
                                 timerRing
+                                    .padding(.bottom, 24)
+                            } else if case .finished = counter.session {
+                                finishedOverlay
+                            } else if case .idle = counter.session {
+                                idleGuidanceOverlay
                             } else {
                                 EmptyView()
                             }
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 24)
                     }
-                    
-                    Spacer()
-
-                    bottomAction
                 }
                 .frame(maxWidth: .infinity)
             },
             trailing: {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     Text("Show Landmarks")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.muted)
                     Toggle("", isOn: $showSkeleton)
                         .labelsHidden()
                         .tint(Theme.accent)
+                }
+            },
+            titleTrailing: {
+                if allowSkip && counter.session != .finished {
+                    Button { finish(nil) } label: {
+                        Text("Belum Bisa!")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                            .underline()
+                    }
                 }
             },
             scrollable: false,
@@ -189,7 +200,7 @@ struct ExerciseView: View {
                 .animation(.easeInOut(duration: 0.2), value: counter.session)
                 .animation(.easeInOut(duration: 0.2), value: counter.isPostureStabilizing)
         }
-        .frame(width: VPW - 48, height: (VPW - 48) * 1.42)
+        .frame(width: VPW - 48, height: (VPW - 48) * 1.72)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Tap-to-start fallback (the counter also auto-starts on a steady posture).
         .onTapGesture {
@@ -236,28 +247,59 @@ struct ExerciseView: View {
         return .red
     }
 
-    // MARK: Bottom action (continue when finished; skip otherwise)
+    // MARK: Guidance overlay during posture scanning (.idle)
 
     @ViewBuilder
-    private var bottomAction: some View {
+    private var idleGuidanceOverlay: some View {
         VStack {
-            switch counter.session {
-            case .finished:
-                PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                    finish(counter.repCount)
-                }
-            default:
-                if allowSkip {
-                    Button { finish(nil) } label: {
-                        Text("Saya tidak bisa melakukannya")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Theme.muted)
-                            .underline()
-                    }
+            Spacer()
+            
+            HStack(spacing: 8) {
+                if counter.isPostureStabilizing {
+                    ProgressView()
+                        .tint(.white)
+                        .controlSize(.small)
+                    Text("Tahan Posisi...")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                } else {
+                    Image(systemName: "figure.stand")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.yellow)
+                    Text(idleInstructionText)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white)
                 }
             }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(.bottom, 24)
         }
-        .frame(height: 50)
+    }
+
+    private var idleInstructionText: String {
+        switch counter.mode {
+        case .sitToStand:
+            return "Duduk di kursi dan hadap samping untuk mulai"
+        case .stepUp, .calfRaise:
+            return "Berdiri menghadap samping"
+        }
+    }
+
+    // MARK: Overlay when session finished (next exercise button inside camera frame)
+
+    @ViewBuilder
+    private var finishedOverlay: some View {
+        VStack {
+            Spacer()
+            
+            PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                finish(counter.repCount)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
 
     private func finish(_ reps: Int?) {

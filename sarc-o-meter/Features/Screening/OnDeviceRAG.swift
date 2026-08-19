@@ -46,7 +46,6 @@ enum OnDeviceRAG {
         var tags: Set<String> = ["general_exercise_principles", "nutrition"]
         if result.muscleMassStatus == .abnormal  { tags.insert("low_muscle_mass") }
         if result.strengthStatus == .abnormal     { tags.insert("low_strength") }
-        if result.performanceStatus == .abnormal   { tags.insert("low_performance") }
         if !result.obesityFlags.isEmpty            { tags.insert("central_obesity") }
         if !result.redFlags.isEmpty                { tags.insert("contraindication") }
         switch result.overallRisk {
@@ -313,7 +312,7 @@ enum OnDeviceRAG {
     private static func resultSummary(_ r: AssessmentResult) -> String {
         var lines = [
             "- Estimasi risiko: \(riskLabel(r.overallRisk))",
-            "- Massa otot: \(statusLabel(r.muscleMassStatus)); kekuatan: \(statusLabel(r.strengthStatus)); performa berjalan: \(statusLabel(r.performanceStatus))",
+            "- Massa otot: \(statusLabel(r.muscleMassStatus)); kekuatan: \(statusLabel(r.strengthStatus))",
         ]
         if !r.redFlags.isEmpty {
             lines.append("- Tanda keselamatan: \(r.redFlags.joined(separator: "; "))")
