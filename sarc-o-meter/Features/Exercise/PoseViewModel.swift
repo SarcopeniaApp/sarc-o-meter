@@ -17,6 +17,7 @@ final class PoseViewModel: NSObject, ObservableObject {
     private var lockedCenter: CGPoint?
     private var framesSinceLastSeen: Int = 0
     private let maxLostFrames: Int = 15 // ~0.5 detik toleransi jika subjek terhalang sebentar
+    private let smoother = LandmarkSmoother(alpha: 0.35, resetVisibility: 0.20)
 
     override init() {
         super.init()
@@ -28,18 +29,21 @@ final class PoseViewModel: NSObject, ObservableObject {
     func start() {
         lockedCenter = nil
         framesSinceLastSeen = 0
+        smoother.reset()
         cameraManager.checkPermissionAndStart()
     }
     
     func stop() {
         cameraManager.stop()
         lockedCenter = nil
+        smoother.reset()
     }
 
     /// Reset lock subjek secara manual
     func unlockPerson() {
         lockedCenter = nil
         framesSinceLastSeen = 0
+        smoother.reset()
     }
 }
 
@@ -83,6 +87,7 @@ extension PoseViewModel: PoseServiceDelegate {
                 framesSinceLastSeen += 1
                 if framesSinceLastSeen > maxLostFrames {
                     lockedCenter = nil // Lock di-reset jika hilang terlalu lama
+                    smoother.reset()
                 }
             }
         }
@@ -94,14 +99,20 @@ extension PoseViewModel: PoseServiceDelegate {
                 targetPerson = largestPerson
                 lockedCenter = center
                 framesSinceLastSeen = 0
+                smoother.reset()
             }
         }
 
-        DispatchQueue.main.async {
-            if let targetPerson {
-                self.landmarks = [targetPerson] // Overlay HANYA menggambar skeleton orang terpilih
-                self.onPerson?(targetPerson)   // RepCounter HANYA memproses data orang terpilih
-            } else {
+        if let targetPerson {
+            // Terapkan Temporal Smoothing (EMA) pada 33 titik skeleton subjek terkunci
+            let smoothedPerson = smoother.smooth(targetPerson)
+            DispatchQueue.main.async {
+                self.landmarks = [smoothedPerson] // Overlay HANYA menggambar skeleton halus
+                self.onPerson?(smoothedPerson)   // RepCounter HANYA memproses data halus
+            }
+        } else {
+            smoother.reset()
+            DispatchQueue.main.async {
                 self.landmarks = []
             }
         }
@@ -113,7 +124,7 @@ extension PoseViewModel: PoseServiceDelegate {
     private func centerPoint(of person: [NormalizedLandmark]) -> CGPoint? {
         guard person.count >= 25 else { return nil }
         let h1 = person[23], h2 = person[24]
-        if (h1.presence ?? 1.0) > 0.2 || (h2.presence ?? 1.0) > 0.2 {
+        if (h1.presence?.doubleValue ?? 1.0) > 0.2 || (h2.presence?.doubleValue ?? 1.0) > 0.2 {
             return CGPoint(x: Double(h1.x + h2.x) / 2.0, y: Double(h1.y + h2.y) / 2.0)
         }
         let points = [11, 12, 23, 24].filter { $0 < person.count }
