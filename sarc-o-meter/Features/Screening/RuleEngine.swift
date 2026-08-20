@@ -81,21 +81,45 @@ enum RuleEngine {
         }
 
         // 3. Strength & performance, scored from the three exercises' reps.
-        //    IMPORTANT: these rep thresholds (counts in a ~10 s session) are
+        //    IMPORTANT: these rep thresholds (counts in a ~30 s session) are
         //    heuristics, NOT AWGS-validated cutoffs like the old chair-stand/gait
         //    tests — tune them on real users (the ExerciseLab helps).
-        let sitToStandMin = 5   // fewer than this → weak legs
+        //
+        //    Three-tier classification:
+        //      .normal   → meets thresholds on primary tests
+        //      .limited  → completed exercises but below thresholds
+        //      .abnormal → couldn't do primary exercise(s) at all (skipped / 0 reps)
+        let sitToStandMin = 5   // fewer than this → below normal
         let stepUpMin = 4       // functional mobility
         let calfRaiseMin = 8    // calf strength/endurance
+
+        // Store per-exercise ability for downstream plan personalization.
+        result.exerciseAbility = ExerciseAbility(
+            sitToStandReps: user.sitToStandReps,
+            stepUpReps: user.stepUpReps,
+            calfRaiseReps: user.calfRaiseReps
+        )
 
         // Strength: lower-limb power. Sit-to-stand is primary; a low (present)
         // calf-raise reinforces it. A *skipped* sit-to-stand ("couldn't do it")
         // is itself a strong weakness signal.
         if let sit = user.sitToStandReps {
-            var low = sit < sitToStandMin
-            if let calf = user.calfRaiseReps, calf < calfRaiseMin { low = true }
-            result.strengthStatus = low ? .abnormal : .normal
+            if sit == 0 {
+                // Recorded 0 reps → truly abnormal
+                result.strengthStatus = .abnormal
+            } else {
+                let sitOk = sit >= sitToStandMin
+                let calfOk = user.calfRaiseReps.map { $0 >= calfRaiseMin } ?? true
+
+                if sitOk && calfOk {
+                    result.strengthStatus = .normal
+                } else {
+                    // Completed but below threshold → "limited"
+                    result.strengthStatus = .limited
+                }
+            }
         } else {
+            // Skipped sit-to-stand entirely → abnormal
             result.strengthStatus = .abnormal
         }
 
@@ -110,6 +134,7 @@ enum RuleEngine {
         // 4. Combine into an overall risk category.
         let isLowMass = result.muscleMassStatus == .abnormal
         let isLowStrength = result.strengthStatus == .abnormal
+        let isLimitedStrength = result.strengthStatus == .limited
 
         let allNormal = result.muscleMassStatus == .normal &&
             (result.strengthStatus == .normal || result.strengthStatus == .notAssessed)
@@ -117,9 +142,13 @@ enum RuleEngine {
         if result.muscleMassStatus == .notAssessed {
             result.overallRisk = .unassessed
         } else if isLowMass && isLowStrength {
-            result.overallRisk = .severe
+            result.overallRisk = .severe          // both truly low → severe
+        } else if isLowMass && isLimitedStrength {
+            result.overallRisk = .high            // low mass + limited strength → high (not severe!)
         } else if isLowMass || isLowStrength {
-            result.overallRisk = .high
+            result.overallRisk = .high            // one dimension truly low
+        } else if isLimitedStrength {
+            result.overallRisk = .mid             // only strength is limited, mass is ok
         } else if allNormal {
             result.overallRisk = .low
         } else {
@@ -129,3 +158,4 @@ enum RuleEngine {
         return result
     }
 }
+
