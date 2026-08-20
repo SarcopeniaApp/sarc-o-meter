@@ -46,6 +46,7 @@ enum OnDeviceRAG {
         var tags: Set<String> = ["general_exercise_principles", "nutrition"]
         if result.muscleMassStatus == .abnormal  { tags.insert("low_muscle_mass") }
         if result.strengthStatus == .abnormal     { tags.insert("low_strength") }
+        if result.strengthStatus == .limited      { tags.insert("low_strength"); tags.insert("limited_ability") }
         if !result.obesityFlags.isEmpty            { tags.insert("central_obesity") }
         if !result.redFlags.isEmpty                { tags.insert("contraindication") }
         switch result.overallRisk {
@@ -62,8 +63,8 @@ enum OnDeviceRAG {
     /// more important when recommendations need stronger grounding.
     static func maxChunks(for result: AssessmentResult) -> Int {
         switch result.overallRisk {
-        case .severe, .high: return 6
-        case .mid: return 4
+        case .severe, .high: return 8  // more chunks for exercise-specific safety knowledge
+        case .mid: return 5
         case .low, .unassessed: return 3
         }
     }
@@ -123,9 +124,13 @@ enum OnDeviceRAG {
     PENTING: Jumlah latihan dalam array "exercises" tergantung kondisi pengguna:
     - Jika ada "Pembatasan latihan: hanya gerakan ringan", array HANYA berisi 1 objek \
     (Calf Raise saja).
-    - Jika risiko "Berat" (severe), array berisi 1 objek (Calf Raise saja) karena \
-    pengguna perlu memulai dari gerakan paling dasar dan aman.
-    - Untuk risiko lainnya, array berisi tepat 3 objek (Sit to Stand, Step Up, Calf Raise).
+    - Jika pengguna telah melakukan tes, array HANYA berisi latihan yang BERHASIL \
+    mereka lakukan (minimal 1 repetisi). JANGAN masukkan latihan yang ditandai \
+    "Tidak bisa melakukan (dilewati)".
+    - Jika pengguna sama sekali tidak bisa melakukan semua latihan, array berisi \
+    1 objek (Calf Raise saja) karena perlu memulai dari gerakan paling dasar.
+    - Sertakan parameter keselamatan SPESIFIK per latihan: tinggi step (cm), jenis \
+    kursi (tinggi, stabilitas), kebutuhan pegangan, dari referensi yang diberikan.
     """
 
     /// Builds the grounded prompt: the user's real result summary, the deterministic
@@ -154,20 +159,42 @@ enum OnDeviceRAG {
             bmi = (w / (hm * hm)).rounded(toPlaces: 1)
         }
 
-        // Tailor the final instruction based on severity.
+        // Tailor the final instruction based on severity and demonstrated ability.
         let exerciseInstruction: String
-        if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
+        if result.workoutRestriction == .mobilityOnly {
             exerciseInstruction = """
             Buat output sesuai format JSON yang ditentukan di instruksi sistem. Karena \
-            pengguna memiliki keterbatasan dan/atau risiko berat, array "exercises" HANYA \
-            berisi 1 latihan: Calf Raise dengan intensitas sangat rendah, berpegangan \
-            pada dinding/kursi. JANGAN masukkan Sit to Stand atau Step Up.
+            pengguna memiliki pembatasan keras, array "exercises" HANYA berisi 1 latihan: \
+            Calf Raise dengan intensitas sangat rendah, berpegangan pada dinding/kursi. \
+            JANGAN masukkan Sit to Stand atau Step Up.
             """
+        } else if let ability = result.exerciseAbility {
+            let unableAll = ability.grade(for: .sitToStand) == .unable &&
+                            ability.grade(for: .stepUp) == .unable &&
+                            ability.grade(for: .calfRaise) == .unable
+            
+            if unableAll {
+                exerciseInstruction = """
+                Buat output sesuai format JSON yang ditentukan di instruksi sistem. Karena \
+                pengguna sama sekali tidak bisa melakukan tes kekuatan, array "exercises" \
+                HANYA berisi 1 latihan dasar: Calf Raise dengan intensitas sangat rendah. \
+                JANGAN masukkan Sit to Stand atau Step Up.
+                """
+            } else {
+                exerciseInstruction = """
+                Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan \
+                array "exercises" HANYA berisi latihan yang BERHASIL dilakukan oleh pengguna. \
+                Personalisasikan parameter (sets, reps, tempo, restSeconds) BERDASARKAN hasil \
+                tes kekuatan per latihan di atas. Latihan dengan repetisi rendah harus mendapat \
+                parameter lebih konservatif (reps lebih sedikit, tempo lebih lambat, istirahat \
+                lebih lama). Sertakan parameter keselamatan spesifik per latihan (tinggi step, \
+                jenis kursi, kebutuhan pegangan) dari referensi.
+                """
+            }
         } else {
             exerciseInstruction = """
-            Buat output sesuai format JSON yang ditentukan di instruksi sistem. Pastikan semua \
-            3 latihan (Sit to Stand, Step Up, Calf Raise) ada dalam array "exercises" dengan \
-            parameter yang dipersonalisasi untuk pengguna ini.
+            Buat output sesuai format JSON yang ditentukan di instruksi sistem. Personalisasikan \
+            parameter latihan untuk pengguna ini dan sertakan catatan keselamatan dari referensi.
             """
         }
 
@@ -189,6 +216,37 @@ enum OnDeviceRAG {
             restrictionNote = "Status: ada tanda keselamatan — sesuaikan intensitas."
         } else {
             restrictionNote = "Status: tidak ada pembatasan khusus."
+        }
+
+        // Build strength test results section (per-exercise detail).
+        let strengthTestSection: String
+        if let ability = result.exerciseAbility {
+            func repLine(_ name: String, _ reps: Int?, _ threshold: Int) -> String {
+                guard let r = reps else { return "- \(name): Tidak bisa melakukan (dilewati)" }
+                let status = r >= threshold ? "memenuhi ambang normal" : "di bawah ambang normal ≥\(threshold)"
+                return "- \(name): \(r) repetisi dalam 30 detik (\(status))"
+            }
+            var lines = [
+                "Hasil tes kekuatan (30 detik per latihan):",
+                repLine("Sit to Stand", ability.sitToStandReps, 5),
+                repLine("Step Up", ability.stepUpReps, 4),
+                repLine("Calf Raise", ability.calfRaiseReps, 8),
+            ]
+            if ability.completedAll {
+                let allLimited = ability.grade(for: .sitToStand) == .limited ||
+                                 ability.grade(for: .stepUp) == .limited ||
+                                 ability.grade(for: .calfRaise) == .limited
+                if allLimited {
+                    lines.append("→ Pengguna BISA melakukan semua 3 latihan tapi dengan jumlah terbatas. Resepkan semua 3 latihan dengan parameter yang disesuaikan per latihan berdasarkan repetisi yang berhasil.")
+                } else {
+                    lines.append("→ Pengguna berhasil memenuhi ambang normal pada semua latihan.")
+                }
+            } else {
+                lines.append("→ Pengguna TIDAK bisa menyelesaikan semua latihan. JANGAN meresepkan latihan yang tidak bisa mereka lakukan (dilewati/0 rep). Fokus HANYA pada latihan yang berhasil dilakukan.")
+            }
+            strengthTestSection = lines.joined(separator: "\n")
+        } else {
+            strengthTestSection = "Hasil tes kekuatan: tidak tersedia."
         }
 
         return """
@@ -213,6 +271,8 @@ enum OnDeviceRAG {
         - Kondisi neurologis: \(user.hasNeurologicalCondition ? "Ya" : "Tidak")
         - Mengonsumsi obat-obatan rutin: \(user.hasRoutineMedication ? "Ya" : "Tidak")
         - Menggunakan alat bantu jalan: \(user.hasWalkingAid ? "Ya" : "Tidak")
+
+        \(strengthTestSection)
 
         \(restrictionNote)
 
@@ -339,6 +399,7 @@ enum OnDeviceRAG {
     private static func statusLabel(_ s: StatusCategory) -> String {
         switch s {
         case .normal:      return "normal"
+        case .limited:     return "terbatas (bisa melakukan tapi di bawah ambang)"
         case .abnormal:    return "rendah"
         case .notAssessed: return "tidak dinilai"
         }
