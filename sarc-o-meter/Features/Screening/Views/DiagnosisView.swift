@@ -277,6 +277,7 @@ struct DiagnosisView: View {
     private func statusLabel(_ s: StatusCategory) -> String {
         switch s {
         case .normal:      return "Normal"
+        case .limited:     return "Terbatas"
         case .abnormal:    return "Rendah"
         case .notAssessed: return "Tidak dinilai"
         }
@@ -295,6 +296,7 @@ struct DiagnosisView: View {
     private func statusColor(_ s: StatusCategory) -> Color {
         switch s {
         case .normal:      return .green
+        case .limited:     return .orange
         case .abnormal:    return .red
         case .notAssessed: return Theme.muted
         }
