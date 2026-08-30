@@ -43,6 +43,8 @@ struct ExerciseView: View {
     @StateObject private var beeper  = RepBeeper()
     @State private var inCamera = false        // false → showing the how-to pre-roll
     @State private var cameraBlurred = false   // blur the frame once finished
+    @State private var showCompletionSheet = false
+    @State private var editedReps = 0
     @AppStorage("showExerciseLandmarks") private var showSkeleton = true     // toggle skeleton overlay on/off (persisted across exercises)
 
     private let VPW = UIScreen.main.bounds.size.width
@@ -119,7 +121,7 @@ struct ExerciseView: View {
                                 }
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 12)
-                                .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 20))
+                                .background(Theme.accent, in: RoundedRectangle(cornerRadius: 20))
                                 .padding(.bottom, 24)
                             } else if case .running = counter.session {
                                 Spacer()
@@ -171,6 +173,8 @@ struct ExerciseView: View {
             if case .finished = newState {
                 cameraBlurred = true
                 viewModel.stop()
+                editedReps = counter.repCount
+                showCompletionSheet = true
             }
         }
         .onChange(of: counter.repCount) { _, newCount in
@@ -178,6 +182,22 @@ struct ExerciseView: View {
             if case .running = counter.session, newCount > 0 {
                 beeper.beep(forRep: newCount)
             }
+        }
+        .sheet(isPresented: $showCompletionSheet) {
+            ExerciseCompletionSheet(
+                exerciseName: headline ?? counter.mode.rawValue,
+                nextExerciseName: nextExerciseName,
+                reps: $editedReps,
+                onDone: { finalReps in
+                    showCompletionSheet = false
+                    finish(finalReps)
+                }
+            )
+            .presentationDetents([.height(380), .medium])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+            .presentationBackground(Theme.bg)
+            .interactiveDismissDisabled(true)
         }
         .animation(.easeInOut(duration: 0.3), value: cameraBlurred)
     }
@@ -273,7 +293,7 @@ struct ExerciseView: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
-            .background(.black.opacity(0.55), in: Capsule())
+            .background(Theme.accent, in: Capsule())
             .padding(.bottom, 24)
         }
     }
@@ -295,7 +315,11 @@ struct ExerciseView: View {
             Spacer()
             
             PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                finish(counter.repCount)
+                if showCompletionSheet {
+                    // If sheet is active, primary button in overlay triggers completion sheet action
+                } else {
+                    finish(editedReps)
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -307,3 +331,147 @@ struct ExerciseView: View {
         onFinish(reps)
     }
 }
+
+// MARK: - Exercise Completion Sheet
+
+struct ExerciseCompletionSheet: View {
+    let exerciseName: String
+    let nextExerciseName: String?
+    @Binding var reps: Int
+    let onDone: (Int) -> Void
+
+    @State private var isEditing: Bool = false
+    @State private var repsString: String = ""
+    @FocusState private var isInputFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header: Icon Done Hijau + Tulisan Selesai & Nama Latihan
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.15))
+                        .frame(width: 68, height: 68)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 46, weight: .semibold))
+                        .foregroundStyle(.green)
+                }
+
+                VStack(spacing: 4) {
+                    Text("Selesai!")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Theme.ink)
+                    
+                    Text(exerciseName)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                }
+            }
+            .padding(.top, 24)
+
+            // Qty Reps Section + Edit Button
+            HStack(spacing: 12) {
+                if isEditing {
+                    HStack(spacing: 8) {
+                        Text("Reps:")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.ink)
+
+                        TextField("Qty", text: $repsString)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 75, height: 40)
+                            .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Theme.accent, lineWidth: 2)
+                            )
+                            .focused($isInputFocused)
+
+                        Text("x")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(Theme.ink)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        commitEdit()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Selesai")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent, in: Capsule())
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Text("Reps:")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.muted)
+
+                        Text("\(reps)x")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.accent)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        repsString = "\(reps)"
+                        isEditing = true
+                        isInputFocused = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Edit")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Theme.cardShadow, radius: 8, x: 0, y: 4)
+
+            Spacer(minLength: 0)
+
+            // Primary Button (Lanjut ke [Next] atau Selesai)
+            PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
+                if isEditing {
+                    commitEdit()
+                }
+                onDone(reps)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
+        .onAppear {
+            repsString = "\(reps)"
+        }
+    }
+
+    private func commitEdit() {
+        if let val = Int(repsString), val >= 0 {
+            reps = val
+        } else {
+            repsString = "\(reps)"
+        }
+        isEditing = false
+        isInputFocused = false
+    }
+}
+
