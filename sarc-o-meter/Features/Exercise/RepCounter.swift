@@ -128,9 +128,13 @@ private final class RepetitionDetector {
                    minRepInterval: 0.5, calibrationRelax: 0.01)
         }
         static func calfRaise() -> Config {
-            Config(minRange: 0.040, lowRatioThreshold: 0.25, highRatioThreshold: 0.40,
-                   minRepInterval: 1.0, calibrationRelax: 0.01)
+            Config(minRange: 0.025,          // Diturunkan dari 0.035 ke 0.025 (lebih sensitif pada jinjit pendek)
+                   lowRatioThreshold: 0.35,  // Dinaikkan dari 0.20 ke 0.35 (memudahkan pemicu transisi kembali ke dasar)
+                   highRatioThreshold: 0.60, // Memastikan puncak terdeteksi di 60% rentang gerakan
+                   minRepInterval: 0.5,      // Diturunkan dari 1.0 ke 0.5 detik (mencegah lockout Rep 2 yang cepat)
+                   calibrationRelax: 0.01)
         }
+
     }
 
     let config: Config
@@ -628,20 +632,28 @@ final class RepCounter: ObservableObject {
     private var calfRiseBuffer: [Double] = []
 
     private func processCalfRaise(_ p: [NormalizedLandmark], ts: TimeInterval) {
-        // Kalibrasi baseline tumit hanya dilakukan saat running.
-        // Selama countdown, proses ini di-skip agar baseline tidak ter-set
-        // dari posisi yang salah (misalnya pengguna belum siap berdiri netral).
         if heelBaselineY == nil {
             guard case .running = session else { isReady = false; return }
             calibrateCalfBaseline(p)
-            isReady = false   // belum siap selama kalibrasi baseline berlangsung
+            isReady = false
             return
         }
+        
         guard let normRise = smoothedCalfNormRise(p) else { return }
+
+        // Auto-update baseline secara halus setiap kali tumit terdeteksi napak lantai (normRise == 0.0)
+        if normRise <= 0.01 {
+            let useLeft = vis(p, 27) >= vis(p, 28)
+            let heelIdx = useLeft ? 29 : 30
+            if heelIdx < p.count, vis(p, heelIdx) >= visSecondary {
+                let currentHeelY = Double(p[heelIdx].y)
+                heelBaselineY = (heelBaselineY! * 0.90) + (currentHeelY * 0.10)
+            }
+        }
 
         if normRise > peakNormHeelRise { peakNormHeelRise = normRise }
 
-        // Track hold duration di puncak (normRise > 80% dari peak sesi)
+        // Track hold duration di puncak
         let peakThresh = (detector.isReady ? 0.8 : 0.6) * peakNormHeelRise
         if normRise >= peakThresh {
             if holdStartTime == nil { holdStartTime = ts }
@@ -681,14 +693,34 @@ final class RepCounter: ObservableObject {
         guard let baseline = heelBaselineY else { return nil }
         let useLeft = vis(p, 27) >= vis(p, 28)
         let ankleI = useLeft ? 27 : 28, kneeI = useLeft ? 25 : 26, heelI = useLeft ? 29 : 30
+        let toeI   = useLeft ? 31 : 32  // Landmark 31 (Left Foot Index) & 32 (Right Foot Index)
+
         guard ankleI < p.count, kneeI < p.count, heelI < p.count,
               vis(p, ankleI) >= visPrimary, vis(p, kneeI) >= visPrimary,
               vis(p, heelI)  >= visSecondary else { return nil }
+        
         let shank = dist(p[ankleI], p[kneeI])
         guard shank > 1e-4 else { return nil }
-        // baseline - currentY: positif bila tumit naik (y image bertambah ke bawah)
-        return (baseline - Double(p[heelI].y)) / shank
+
+        // ── 1. Deteksi Napak Lantai Presisi berbasis Jari Kaki (Toe Anchor) ──────
+        if toeI < p.count, vis(p, toeI) >= visSecondary {
+            let toeY  = Double(p[toeI].y)
+            let heelY = Double(p[heelI].y)
+            // Dalam koord image (y=0 di atas, y=1 di bawah):
+            // Saat napak lantai, heelY mendekati toeY. Selisih (toeY - heelY) / shank <= 0.015.
+            let heelToeDiff = (toeY - heelY) / shank
+            
+            // Jika tumit sudah mendarat sejajar dengan jari kaki (napak lantai):
+            if heelToeDiff <= 0.015 {
+                return 0.0  // Paksa ke 0.0 agar detector LANGSUNG memicu hitung rep +1
+            }
+        }
+
+        // ── 2. Hitung Kenaikan Tumit dari Baseline Lantai ───────────────────────
+        let riseFromBaseline = (baseline - Double(p[heelI].y)) / shank
+        return max(0.0, riseFromBaseline)
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // MARK: - Rep Completed → Level + Form Score + Feedback
