@@ -340,10 +340,6 @@ struct ExerciseCompletionSheet: View {
     @Binding var reps: Int
     let onDone: (Int) -> Void
 
-    @State private var isEditing: Bool = false
-    @State private var repsString: String = ""
-    @FocusState private var isInputFocused: Bool
-
     var body: some View {
         VStack(spacing: 20) {
             // Header: Icon Done Hijau + Tulisan Selesai & Nama Latihan
@@ -369,76 +365,40 @@ struct ExerciseCompletionSheet: View {
             }
             .padding(.top, 24)
 
-            // Qty Reps Section + Edit Button
+            // Qty Reps Section dengan tombol - dan + (angka reps di tengah)
             HStack(spacing: 12) {
-                if isEditing {
-                    HStack(spacing: 8) {
-                        Text("Reps:")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.ink)
+                Text("Reps:")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.muted)
 
-                        TextField("Qty", text: $repsString)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 75, height: 40)
-                            .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Theme.accent, lineWidth: 2)
-                            )
-                            .focused($isInputFocused)
+                Spacer()
 
-                        Text("x")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Theme.ink)
-                    }
-
-                    Spacer()
-
+                HStack(spacing: 14) {
                     Button {
-                        commitEdit()
+                        if reps > 0 { reps -= 1 }
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Selesai")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.accent, in: Capsule())
+                        Image(systemName: "minus")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(reps > 0 ? Theme.accent : Theme.muted.opacity(0.4))
+                            .frame(width: 36, height: 36)
+                            .background(reps > 0 ? Theme.accent.opacity(0.12) : Color.gray.opacity(0.1), in: Circle())
                     }
-                } else {
-                    HStack(spacing: 6) {
-                        Text("Reps:")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.muted)
+                    .disabled(reps <= 0)
 
-                        Text("\(reps)x")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.accent)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        repsString = "\(reps)"
-                        isEditing = true
-                        isInputFocused = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Edit")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
+                    Text("\(reps)x")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                        .frame(minWidth: 48)
+                        .multilineTextAlignment(.center)
+
+                    Button {
+                        reps += 1
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 36, height: 36)
+                            .background(Theme.accent.opacity(0.12), in: Circle())
                     }
                 }
             }
@@ -451,27 +411,12 @@ struct ExerciseCompletionSheet: View {
 
             // Primary Button (Lanjut ke [Next] atau Selesai)
             PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                if isEditing {
-                    commitEdit()
-                }
                 onDone(reps)
             }
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 24)
-        .onAppear {
-            repsString = "\(reps)"
-        }
-    }
-
-    private func commitEdit() {
-        if let val = Int(repsString), val >= 0 {
-            reps = val
-        } else {
-            repsString = "\(reps)"
-        }
-        isEditing = false
-        isInputFocused = false
     }
 }
+
 
