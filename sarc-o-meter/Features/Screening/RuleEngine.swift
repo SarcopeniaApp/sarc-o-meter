@@ -19,11 +19,14 @@ enum RuleEngine {
         if user.hasRecentSurgeryOrHospitalization {
             result.redFlags.append("Operasi besar atau rawat inap baru-baru ini (< 3 bulan).")
         }
-        if user.hasUnstableCardio {
-            result.redFlags.append("Kondisi kardiovaskular tidak stabil.")
+        if user.hasHeartCondition {
+            result.redFlags.append("Gangguan jantung (sering berdebar-debar atau riwayat diagnosis jantung).")
         }
-        if user.hasRecentFalls {
-            result.redFlags.append("Riwayat sering terjatuh.")
+        if user.hasUncontrolledBP {
+            result.redFlags.append("Tekanan darah tinggi tidak terkontrol.")
+        }
+        if user.hasBalanceOrDizziness {
+            result.redFlags.append("Sering kehilangan keseimbangan atau merasa pusing.")
         }
         if user.hasAcuteJointPainOrFracture {
             result.redFlags.append("Nyeri sendi akut atau patah tulang belum sembuh.")
@@ -31,10 +34,27 @@ enum RuleEngine {
         if user.hasNeurologicalCondition {
             result.redFlags.append("Kondisi neurologis yang memengaruhi keseimbangan.")
         }
+        if user.hasRoutineMedication {
+            result.redFlags.append("Mengonsumsi obat-obatan rutin (perlu pertimbangan interaksi obat & latihan).")
+        }
+        if user.hasWalkingAid {
+            result.redFlags.append("Menggunakan alat bantu jalan — latihan harus disesuaikan.")
+        }
 
-        // Safety restriction: surgery/hospitalization or unstable cardio limits
-        // the plan to supervised mobility & balance work only.
-        if user.hasRecentSurgeryOrHospitalization || user.hasUnstableCardio {
+        // Safety restriction: only conditions that DIRECTLY impair the ability
+        // to safely perform lower-limb resistance exercises trigger the hard
+        // mobility-only restriction.  Other flags (recent hospitalization,
+        // routine medication, balance/dizziness) remain red-flag warnings that
+        // reduce intensity via ExercisePlan's redFlags logic, but still allow
+        // all three exercises — because e.g. recovering from typhus doesn't
+        // prevent someone from doing Sit to Stand or Step Up.
+        let hasHardRestriction = user.hasHeartCondition ||
+                                 user.hasUncontrolledBP ||
+                                 user.hasNeurologicalCondition ||
+                                 user.hasWalkingAid ||
+                                 user.hasAcuteJointPainOrFracture
+
+        if hasHardRestriction {
             result.workoutRestriction = .mobilityOnly
         }
 
@@ -61,30 +81,50 @@ enum RuleEngine {
         }
 
         // 3. Strength & performance, scored from the three exercises' reps.
-        //    IMPORTANT: these rep thresholds (counts in a ~10 s session) are
+        //    IMPORTANT: these rep thresholds (counts in a ~30 s session) are
         //    heuristics, NOT AWGS-validated cutoffs like the old chair-stand/gait
         //    tests — tune them on real users (the ExerciseLab helps).
-        let sitToStandMin = 5   // fewer than this → weak legs
+        //
+        //    Three-tier classification:
+        //      .normal   → meets thresholds on primary tests
+        //      .limited  → completed exercises but below thresholds
+        //      .abnormal → couldn't do primary exercise(s) at all (skipped / 0 reps)
+        let sitToStandMin = 5   // fewer than this → below normal
         let stepUpMin = 4       // functional mobility
         let calfRaiseMin = 8    // calf strength/endurance
+
+        // Store per-exercise ability for downstream plan personalization.
+        result.exerciseAbility = ExerciseAbility(
+            sitToStandReps: user.sitToStandReps,
+            stepUpReps: user.stepUpReps,
+            calfRaiseReps: user.calfRaiseReps
+        )
 
         // Strength: lower-limb power. Sit-to-stand is primary; a low (present)
         // calf-raise reinforces it. A *skipped* sit-to-stand ("couldn't do it")
         // is itself a strong weakness signal.
         if let sit = user.sitToStandReps {
-            var low = sit < sitToStandMin
-            if let calf = user.calfRaiseReps, calf < calfRaiseMin { low = true }
-            result.strengthStatus = low ? .abnormal : .normal
+            if sit == 0 {
+                // Recorded 0 reps → truly abnormal
+                result.strengthStatus = .abnormal
+            } else {
+                let sitOk = sit >= sitToStandMin
+                let calfOk = user.calfRaiseReps.map { $0 >= calfRaiseMin } ?? true
+
+                if sitOk && calfOk {
+                    result.strengthStatus = .normal
+                } else {
+                    // Completed but below threshold → "limited"
+                    result.strengthStatus = .limited
+                }
+            }
         } else {
+            // Skipped sit-to-stand entirely → abnormal
             result.strengthStatus = .abnormal
         }
 
-        // Performance: functional mobility from the step-up.
-        if let step = user.stepUpReps {
-            result.performanceStatus = step < stepUpMin ? .abnormal : .normal
-        } else {
-            result.performanceStatus = .abnormal
-        }
+        // Performance: walking performance taken out.
+        result.performanceStatus = .notAssessed
 
         // Any skipped exercise → flag for direct professional evaluation.
         if user.sitToStandReps == nil || user.stepUpReps == nil || user.calfRaiseReps == nil {
@@ -94,20 +134,21 @@ enum RuleEngine {
         // 4. Combine into an overall risk category.
         let isLowMass = result.muscleMassStatus == .abnormal
         let isLowStrength = result.strengthStatus == .abnormal
-        let isLowPerformance = result.performanceStatus == .abnormal
+        let isLimitedStrength = result.strengthStatus == .limited
 
         let allNormal = result.muscleMassStatus == .normal &&
-            (result.strengthStatus == .normal || result.strengthStatus == .notAssessed) &&
-            (result.performanceStatus == .normal || result.performanceStatus == .notAssessed)
+            (result.strengthStatus == .normal || result.strengthStatus == .notAssessed)
 
         if result.muscleMassStatus == .notAssessed {
             result.overallRisk = .unassessed
-        } else if isLowMass && isLowStrength && isLowPerformance {
-            result.overallRisk = .severe
-        } else if isLowMass && (isLowStrength || isLowPerformance) {
-            result.overallRisk = .high
-        } else if isLowMass || isLowStrength || isLowPerformance {
-            result.overallRisk = .mid
+        } else if isLowMass && isLowStrength {
+            result.overallRisk = .severe          // both truly low → severe
+        } else if isLowMass && isLimitedStrength {
+            result.overallRisk = .high            // low mass + limited strength → high (not severe!)
+        } else if isLowMass || isLowStrength {
+            result.overallRisk = .high            // one dimension truly low
+        } else if isLimitedStrength {
+            result.overallRisk = .mid             // only strength is limited, mass is ok
         } else if allNormal {
             result.overallRisk = .low
         } else {
@@ -117,3 +158,4 @@ enum RuleEngine {
         return result
     }
 }
+

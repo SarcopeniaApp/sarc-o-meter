@@ -1,23 +1,25 @@
 //  DiagnosisView.swift
 //
 //  The screening payoff: the deterministic AWGS rule result (risk, per-indicator
-//  status, flags) plus the on-device LLM's plain-language analysis. "Mulai
-//  latihan" saves the screening and moves the user into the tracker.
+//  status, flags) plus the on-device LLM's plain-language analysis and detailed
+//  exercise prescription. "Mulai latihan" saves the screening and moves the user
+//  into the tracker.
 
 import SwiftUI
 
 struct DiagnosisView: View {
     let result: AssessmentResult
-    let analysis: String?      // on-device LLM output; nil while generating
+    let analysis: String?          // on-device LLM output; nil while generating
+    let exercises: [Workout]       // detailed exercise prescription
+    let weeklySchedule: String?    // weekly schedule text
     let isGenerating: Bool
     let onFinish: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Hasil Skrining")
-
-            ScrollView {
-                VStack(spacing: 16) {
+        PageWrapper(
+            title: "Hasil Screening",
+            content: {
+                VStack(spacing: 24) {
                     riskCard
                     statusCard
                     if !result.redFlags.isEmpty {
@@ -28,17 +30,17 @@ struct DiagnosisView: View {
                     }
                     if result.workoutRestriction == .mobilityOnly { restrictionCard }
                     analysisSection
+                    if !isGenerating {
+                        weeklyScheduleSection
+                        exercisePlanSection
+                    }
+                    disclaimer
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 8)
+            },
+            footer: {
+                PrimaryButton(title: "Mulai latihan", enabled: !isGenerating, action: onFinish)
             }
-
-            PrimaryButton(title: "Mulai latihan", enabled: !isGenerating, action: onFinish)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+        )
     }
 
     // MARK: Rule-engine summary
@@ -64,8 +66,6 @@ struct DiagnosisView: View {
             statusRow("Massa otot", result.muscleMassStatus)
             Divider().padding(.leading, 18)
             statusRow("Kekuatan", result.strengthStatus)
-            Divider().padding(.leading, 18)
-            statusRow("Performa berjalan", result.performanceStatus)
         }
         .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
         .shadow(color: Theme.cardShadow, radius: 8, y: 4)
@@ -104,7 +104,7 @@ struct DiagnosisView: View {
     private var restrictionCard: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "hand.raised.fill").foregroundStyle(.red)
-            Text("Demi keselamatan Anda, latihan dibatasi pada gerakan ringan & keseimbangan — minta izin profesional sebelum latihan yang lebih berat.")
+            Text("Demi keselamatan Anda, latihan dibatasi pada gerakan ringan & keseimbangan. Minta izin profesional sebelum latihan yang lebih berat.")
                 .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -126,7 +126,7 @@ struct DiagnosisView: View {
             .frame(maxWidth: .infinity).padding(.vertical, 28)
         } else if let analysis, !analysis.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Label("Analisis & saran", systemImage: "text.bubble.fill")
+                Label("Analisis Kondisi", systemImage: "text.bubble.fill")
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
                 Text(analysis)
                     .font(.system(size: 14)).foregroundStyle(Theme.ink)
@@ -136,10 +136,119 @@ struct DiagnosisView: View {
             .padding(18)
             .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
             .shadow(color: Theme.cardShadow, radius: 8, y: 4)
-
-            disclaimer
         }
     }
+
+    // MARK: Weekly schedule
+
+    @ViewBuilder
+    private var weeklyScheduleSection: some View {
+        if let schedule = weeklySchedule, !schedule.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Jadwal Mingguan", systemImage: "calendar")
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
+                Text(schedule)
+                    .font(.system(size: 14)).foregroundStyle(Theme.ink)
+                    .fixedSize(horizontal: false, vertical: true).lineSpacing(3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
+            .shadow(color: Theme.cardShadow, radius: 8, y: 4)
+        }
+    }
+
+    // MARK: Detailed exercise plan
+
+    @ViewBuilder
+    private var exercisePlanSection: some View {
+        if !exercises.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Rencana Latihan", systemImage: "figure.strengthtraining.traditional")
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
+                    .padding(.bottom, 2)
+
+                ForEach(exercises) { workout in
+                    exerciseDetailCard(workout)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func exerciseDetailCard(_ workout: Workout) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Exercise name
+            Text(displayName(workout.kind))
+                .font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.ink)
+
+            // Sets × Reps × Rest — icon row
+            HStack(spacing: 16) {
+                iconStat(icon: "arrow.triangle.2.circlepath", value: "\(workout.setsPerDay) set")
+                iconStat(icon: "repeat", value: "\(workout.repsPerSet) reps")
+                if let rest = workout.restSeconds {
+                    iconStat(icon: "timer", value: "\(rest)s rest")
+                }
+            }
+
+            // Tempo
+            if let tempo = workout.tempo, !tempo.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("Tempo:")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink)
+                    Text(tempo)
+                        .font(.system(size: 13)).foregroundStyle(Theme.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            // Safety notes (red/yellow warning)
+            if let safety = workout.safetyNotes, !safety.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.orange)
+                    Text(safety)
+                        .font(.system(size: 12)).foregroundStyle(Color(red: 0.6, green: 0.4, blue: 0.0))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            }
+
+            // Progression tip (blue)
+            if let tip = workout.progressionTip, !tip.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.blue)
+                    Text(tip)
+                        .font(.system(size: 12)).foregroundStyle(.blue)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
+        .shadow(color: Theme.cardShadow, radius: 8, y: 4)
+    }
+
+    private func iconStat(icon: String, value: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.accent)
+            Text(value)
+                .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
+        }
+    }
+
+    // MARK: Disclaimer
 
     private var disclaimer: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -158,9 +267,9 @@ struct DiagnosisView: View {
     private var riskLabel: String {
         switch result.overallRisk {
         case .low:        return "Risiko Rendah"
-        case .mid:        return "Risiko Menengah (Kemungkinan Sarkopenia)"
-        case .high:       return "Risiko Tinggi (Sarkopenia Terkonfirmasi)"
-        case .severe:     return "Risiko Berat (Sarkopenia + Performa Rendah)"
+        case .mid:        return "Risiko Menengah"
+        case .high:       return "Risiko Tinggi"
+        case .severe:     return "Risiko Berat"
         case .unassessed: return "Belum Dinilai (Data Kurang)"
         }
     }
@@ -168,6 +277,7 @@ struct DiagnosisView: View {
     private func statusLabel(_ s: StatusCategory) -> String {
         switch s {
         case .normal:      return "Normal"
+        case .limited:     return "Terbatas"
         case .abnormal:    return "Rendah"
         case .notAssessed: return "Tidak dinilai"
         }
@@ -186,8 +296,20 @@ struct DiagnosisView: View {
     private func statusColor(_ s: StatusCategory) -> Color {
         switch s {
         case .normal:      return .green
+        case .limited:     return .orange
         case .abnormal:    return .red
         case .notAssessed: return Theme.muted
         }
     }
+
+    // MARK: Display helpers
+
+    private func displayName(_ kind: WorkoutKind) -> String {
+        switch kind {
+        case .sitToStand: return "Sit to Stand"
+        case .stepUp:     return "Step Up"
+        case .calfRaise:  return "Calf Raises"
+        }
+    }
 }
+

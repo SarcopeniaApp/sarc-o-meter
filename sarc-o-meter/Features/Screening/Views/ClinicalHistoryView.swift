@@ -12,38 +12,36 @@ struct ClinicalHistoryView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(onBack: onBack)
-
-            ScreenTitle(
-                title: "Cek Kesehatan",
-                subtitle: "Beberapa pertanyaan keselamatan. Ini menandai kondisi yang sebaiknya diperiksa profesional sebelum berolahraga."
-            )
-            .padding(.top, 20)
-
-            ScrollView {
+        PageWrapper(
+            title: "Cek Kesehatan",
+            content: {
+                Subtitle("Beberapa pertanyaan keselamatan. Ini menandai kondisi yang sebaiknya diperiksa profesional sebelum berolahraga.")
+                
                 VStack(spacing: 12) {
                     toggleRow("Operasi atau rawat inap baru-baru ini", "Dalam 3 bulan terakhir",
                               $user.hasRecentSurgeryOrHospitalization)
-                    toggleRow("Kondisi jantung tidak stabil", "mis. nyeri dada, tekanan darah tidak terkontrol",
-                              $user.hasUnstableCardio)
-                    toggleRow("Sering terjatuh", "Dalam 12 bulan terakhir",
-                              $user.hasRecentFalls)
+                    toggleRow("Gangguan jantung", "Apakah sering berdebar-debar, atau pernah didiagnosa gangguan jantung oleh tenaga medis?",
+                              $user.hasHeartCondition)
+                    toggleRow("Tekanan darah tinggi tidak terkontrol", "Tekanan darah yang tidak terkelola dengan baik dapat memengaruhi keselamatan latihan",
+                              $user.hasUncontrolledBP)
+                    toggleRow("Sering kehilangan keseimbangan atau pusing", "Apakah akhir-akhir ini sering merasa tidak stabil saat berdiri atau berjalan?",
+                              $user.hasBalanceOrDizziness)
                     toggleRow("Nyeri sendi akut atau patah tulang belum sembuh", nil,
                               $user.hasAcuteJointPainOrFracture)
                     toggleRow("Kondisi yang memengaruhi keseimbangan", "mis. stroke, Parkinson",
                               $user.hasNeurologicalCondition)
+                    toggleRow("Rutin mengonsumsi obat-obatan", "mis. obat diabetes, pengencer darah, obat jantung",
+                              $user.hasRoutineMedication)
+                    toggleRow("Menggunakan alat bantu jalan", "mis. tongkat, walker, kursi roda",
+                              $user.hasWalkingAid)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-            }
-
-            PrimaryButton(title: "Lanjut", action: onNext)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-        }
-        .background(Theme.bg.ignoresSafeArea())
+                .padding(.bottom, 24)
+            },
+            footer: {
+                PrimaryButton(title: "Lanjut", action: onNext)
+            },
+            onBack: onBack
+        )
     }
 
     private func toggleRow(_ title: String, _ subtitle: String?, _ isOn: Binding<Bool>) -> some View {

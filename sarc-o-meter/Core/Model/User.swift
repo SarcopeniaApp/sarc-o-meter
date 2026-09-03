@@ -37,10 +37,13 @@ final class User: Codable {
 
     // MARK: Clinical history — a "yes" to any becomes a rule-engine red flag.
     var hasRecentSurgeryOrHospitalization = false   // < 3 months
-    var hasUnstableCardio = false
-    var hasRecentFalls = false                      // < 12 months
+    var hasHeartCondition = false                   // palpitations or diagnosed heart issue
+    var hasUncontrolledBP = false                   // uncontrolled blood pressure
+    var hasBalanceOrDizziness = false               // recent balance loss / dizziness
     var hasAcuteJointPainOrFracture = false
     var hasNeurologicalCondition = false
+    var hasRoutineMedication = false                // e.g. diabetes meds, blood thinners
+    var hasWalkingAid = false                       // uses cane, walker, wheelchair
     var otherConditions = ""
 
     // MARK: Exercise test — reps per exercise; nil = skipped ("couldn't do it").
@@ -59,8 +62,9 @@ final class User: Codable {
     // leniently (decodeIfPresent) so older saved blobs keep loading.
     enum CodingKeys: String, CodingKey {
         case gender, age, height, weight, calf, chest, waist, hip, shoulderBreadth
-        case hasRecentSurgeryOrHospitalization, hasUnstableCardio, hasRecentFalls
-        case hasAcuteJointPainOrFracture, hasNeurologicalCondition, otherConditions
+        case hasRecentSurgeryOrHospitalization, hasHeartCondition, hasUncontrolledBP
+        case hasBalanceOrDizziness, hasAcuteJointPainOrFracture, hasNeurologicalCondition
+        case hasRoutineMedication, hasWalkingAid, otherConditions
         case sitToStandReps, stepUpReps, calfRaiseReps
         case screening
     }
@@ -77,10 +81,13 @@ final class User: Codable {
         hip = try c.decodeIfPresent(Double.self, forKey: .hip)
         shoulderBreadth = try c.decodeIfPresent(Double.self, forKey: .shoulderBreadth)
         hasRecentSurgeryOrHospitalization = try c.decodeIfPresent(Bool.self, forKey: .hasRecentSurgeryOrHospitalization) ?? false
-        hasUnstableCardio = try c.decodeIfPresent(Bool.self, forKey: .hasUnstableCardio) ?? false
-        hasRecentFalls = try c.decodeIfPresent(Bool.self, forKey: .hasRecentFalls) ?? false
+        hasHeartCondition = try c.decodeIfPresent(Bool.self, forKey: .hasHeartCondition) ?? false
+        hasUncontrolledBP = try c.decodeIfPresent(Bool.self, forKey: .hasUncontrolledBP) ?? false
+        hasBalanceOrDizziness = try c.decodeIfPresent(Bool.self, forKey: .hasBalanceOrDizziness) ?? false
         hasAcuteJointPainOrFracture = try c.decodeIfPresent(Bool.self, forKey: .hasAcuteJointPainOrFracture) ?? false
         hasNeurologicalCondition = try c.decodeIfPresent(Bool.self, forKey: .hasNeurologicalCondition) ?? false
+        hasRoutineMedication = try c.decodeIfPresent(Bool.self, forKey: .hasRoutineMedication) ?? false
+        hasWalkingAid = try c.decodeIfPresent(Bool.self, forKey: .hasWalkingAid) ?? false
         otherConditions = try c.decodeIfPresent(String.self, forKey: .otherConditions) ?? ""
         sitToStandReps = try c.decodeIfPresent(Int.self, forKey: .sitToStandReps)
         stepUpReps = try c.decodeIfPresent(Int.self, forKey: .stepUpReps)
@@ -100,10 +107,13 @@ final class User: Codable {
         try c.encodeIfPresent(hip, forKey: .hip)
         try c.encodeIfPresent(shoulderBreadth, forKey: .shoulderBreadth)
         try c.encode(hasRecentSurgeryOrHospitalization, forKey: .hasRecentSurgeryOrHospitalization)
-        try c.encode(hasUnstableCardio, forKey: .hasUnstableCardio)
-        try c.encode(hasRecentFalls, forKey: .hasRecentFalls)
+        try c.encode(hasHeartCondition, forKey: .hasHeartCondition)
+        try c.encode(hasUncontrolledBP, forKey: .hasUncontrolledBP)
+        try c.encode(hasBalanceOrDizziness, forKey: .hasBalanceOrDizziness)
         try c.encode(hasAcuteJointPainOrFracture, forKey: .hasAcuteJointPainOrFracture)
         try c.encode(hasNeurologicalCondition, forKey: .hasNeurologicalCondition)
+        try c.encode(hasRoutineMedication, forKey: .hasRoutineMedication)
+        try c.encode(hasWalkingAid, forKey: .hasWalkingAid)
         try c.encode(otherConditions, forKey: .otherConditions)
         try c.encodeIfPresent(sitToStandReps, forKey: .sitToStandReps)
         try c.encodeIfPresent(stepUpReps, forKey: .stepUpReps)

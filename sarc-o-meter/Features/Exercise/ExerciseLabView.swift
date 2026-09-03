@@ -49,7 +49,8 @@ struct ExerciseLabView: View {
             ExerciseView(
                 fixedMode: mode,
                 intensity: value(for: mode),
-                headline: "\(mode.rawValue) · \(Int(value(for: mode) * 100))%"
+                headline: "\(mode.rawValue) · \(Int(value(for: mode) * 100))%",
+                showInstructions: false      // Lab: skip the how-to, go straight to the counter
             ) { _ in active = nil }
         }
     }
