@@ -1,5 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
-defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+echo "=== XCODE CLOUD: Configure Package Plugin Validation ==="
+
+defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+
+echo "=== Package plugin validation disabled ==="
