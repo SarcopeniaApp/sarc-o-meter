@@ -60,6 +60,26 @@ final class LLMManager {
 
     @MainActor
     private func performLoad() async {
+        let cached = isModelCached()
+
+        if cached {
+            // Model sudah ada di cache — load langsung tanpa banner download
+            print("[MLX] Model cached, loading silently…")
+            do {
+                container = try await loadModelContainer(
+                    from: #hubDownloader(),
+                    using: #huggingFaceTokenizerLoader(),
+                    id: modelID
+                )
+                isLoaded = true
+                print("MLX model loaded from cache: \(modelID)")
+            } catch {
+                print("MLX load from cache failed: \(error)")
+            }
+            return
+        }
+
+        // Model belum ada — tampilkan banner download + Live Activity
         isLoading = true
         isLoaded = false
         progressText = "Downloading… 0%"
@@ -97,7 +117,6 @@ final class LLMManager {
         let progressTask = Task { @MainActor in
             let tickMs: UInt64 = 100_000_000  // 100ms per tick
             var elapsed: Double = 0.0
-            let totalDuration: Double = 60.0  // asumsi maks ~60 detik untuk 0→95%
 
             while currentPercent < 100 && !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: tickMs)
@@ -145,6 +164,28 @@ final class LLMManager {
             ModelDownloadActivityManager.shared.stopActivity()
         }
         isLoading = false
+    }
+
+    /// Cek apakah model sudah ter-cache di folder HuggingFace Hub lokal.
+    /// HF Hub menyimpan model di: Caches/huggingface/hub/models--{org}--{name}/snapshots/
+    private func isModelCached() -> Bool {
+        let fm = FileManager.default
+        guard let cacheDir = fm.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return false
+        }
+        // modelID "mlx-community/Qwen2.5-3B-Instruct-4bit" → "models--mlx-community--Qwen2.5-3B-Instruct-4bit"
+        let folderName = "models--" + modelID.replacingOccurrences(of: "/", with: "--")
+        let snapshotsDir = cacheDir
+            .appendingPathComponent("huggingface/hub", isDirectory: true)
+            .appendingPathComponent(folderName, isDirectory: true)
+            .appendingPathComponent("snapshots", isDirectory: true)
+
+        // Jika folder snapshots ada dan tidak kosong, model sudah pernah diunduh
+        guard let contents = try? fm.contentsOfDirectory(atPath: snapshotsDir.path),
+              !contents.isEmpty else {
+            return false
+        }
+        return true
     }
 
     /// Menghitung total ukuran berkas yang terunduh di folder Cache HuggingFace / tmp
