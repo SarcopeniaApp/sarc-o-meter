@@ -76,6 +76,19 @@ struct ContentView: View {
                 content
             }
         }
+        .overlay(alignment: .top) {
+            // In-app download progress banner (tampil saat model AI sedang diunduh)
+            if llm.isLoading && !llm.isLoaded {
+                ModelDownloadBanner(
+                    progress: llm.progressValue,
+                    progressText: llm.progressText
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: llm.isLoading)
         .alert("Terjadi kesalahan",
                isPresented: Binding(get: { errorText != nil },
                                     set: { if !$0 { errorText = nil } })) {
