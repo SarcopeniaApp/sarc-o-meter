@@ -1,0 +1,423 @@
+[
+  {
+    "persona": "A — Healthy 45F (Low Risk)",
+    "risk": "Low Risk",
+    "latency_s": 19.1,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 3 exercises (expected 3)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise', 'Sit to Stand', 'Step Up']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 255 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 111 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {},
+    "raw_output": "{\n  \"insight\": \"Pengguna memiliki estimasi risiko rendah berdasarkan hasil skrining dan profil klinisnya. Massa otot dan kekuatan normal, serta performa berjalan juga normal. Pengguna tidak memiliki riwayat klinis yang memerlukan pembatasan latihan atau perhatian khusus.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna tidak merasakan sakit di dada atau pusing saat melakukan gerakan. Latihan ini dapat dilakukan dengan posisi badan yang stabil untuk mengurangi risiko cedera.\",\n      \"progressionTip\": \"Meningkatkan intensitas bisa dilakukan dengan menambah jumlah berat pada bantuan kaki jika pengguna menggunakan.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Kontrol gerakan (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna berpegangan pada railing atau meja untuk menstabilkan diri saat melakukan langkah maju. Latihan ini dapat dilakukan dengan posisi badan yang stabil.\",\n      \"progressionTip\": \"Meningkatkan intensitas bisa dilakukan dengan meningkatkan tinggi langkah maju.\"\n    },\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 3,\n      \"reps\": 12,\n      \"tempo\": \"Lambat dan terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna tidak merasakan sakit di dada atau pusing saat melakukan gerakan. Latihan ini dapat dilakukan dengan posisi badan yang stabil.\",\n      \"progressionTip\": \"Meningkatkan intensitas bisa dilakukan dengan menambah jumlah berat pada bantuan kaki jika pengguna menggunakan.\"\n    }\n  ],\n  \"weeklySchedule\": \"Senin: Sit to Stand, Selasa: Step Up, Rabu: Calf Raise; Jumat: Sit to Stand, Sabtu: Step Up, Minggu: Calf Raise\"\n}",
+    "prompt_length_chars": 5112
+  },
+  {
+    "persona": "B — 62M Possible Sarcopenia (Mid Risk)",
+    "risk": "Mid Risk (Possible Sarcopenia)",
+    "latency_s": 20.0,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 3 exercises (expected 3)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise', 'Sit to Stand', 'Step Up']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 561 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 111 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {},
+    "raw_output": "{\n  \"insight\": \"Pengguna adalah pria berusia 62 tahun dengan BMI normal dan massa otot rendah, terlihat dari lingkar pinggangnya di atas ambang batas (85 cm) yang menandakan penumpukan lemak sentral. Ini mengindikasikan potensi sarcopenic obesity — kombinasi antara kekurangan massa otot dengan lemak visceral tinggi. Pengguna tidak memiliki riwayat klinis gangguan jantung, tekanan darah tinggi, atau kondisi neurologis yang memerlukan pembatasan latihan. Namun, karena estimasi risiko menengah dan massa otot rendah, pengguna perlu mulai dengan gerakan paling dasar dan aman.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna melakukan gerakan dengan lambat dan teratur untuk menghindari cedera otot.\",\n      \"progressionTip\": \"Meningkatkan intensitas dengan menambah jumlah repetisi atau set, tetapi jangan melebihi batas yang disarankan.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Kontrol gerakan (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna menggunakan kaki yang lebih kecil sebagai dasar untuk memaksimalkan intensitas latihan.\",\n      \"progressionTip\": \"Meningkatkan intensitas dengan menambah beban, seperti menggunakan tas atau benda berat.\"\n    },\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 30,\n      \"safetyNotes\": \"Pastikan pengguna melakukan gerakan dengan lambat dan teratur untuk menghindari cedera otot.\",\n      \"progressionTip\": \"Meningkatkan intensitas dengan menambah jumlah repetisi atau set, tetapi jangan melebihi batas yang disarankan.\"\n    }\n  ],\n  \"weeklySchedule\": \"Senin: Sit to Stand. Selasa: Step Up. Rabu: Calf Raise. Kamis: Sit to Stand. Jumat: Step Up. Sabtu: Calf Raise.\"\n}",
+    "prompt_length_chars": 5597
+  },
+  {
+    "persona": "C — 72F Low Muscle + Low Strength (High Risk)",
+    "risk": "High Risk (Probable/Confirmed Sarcopenia)",
+    "latency_s": 22.3,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 3 exercises (expected 3)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise', 'Sit to Stand', 'Step Up']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 569 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 91 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {},
+    "raw_output": "{\n  \"insight\": \"Pengguna memiliki estimasi risiko tinggi berdasarkan indikator seperti massa otot rendah dan kekuatan rendah. Ini menunjukkan adanya potensi sarcopenia, yaitu penurunan massa otot yang terkait dengan usia. Meskipun BMI normal (21.6), pengguna memiliki tanda obesitas sentral (WHtR > 0,5) dan lingkar pinggang di atas ambang batas (78 cm untuk wanita). Ini menambahkan risiko keterbatasan fungsional sehari-hari seperti naik tangga atau bangkit dari kursi rendah. Pengguna juga memiliki tanda berat badan yang ideal, tetapi massa otot dan kekuatan terlihat lebih rendah.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Sit to Stand\",\n      \"sets\": 2,\n      \"reps\": 8,\n      \"tempo\": \"Lambat dan terkontrol (3 detik naik, 3 detik turun)\",\n      \"restSeconds\": 45,\n      \"safetyNotes\": \"Pastikan pengguna tidak merasa sakit saat berdiri. Jika merasakan nyeri atau kesulitan, segera hentikan dan konsultasikan dengan dokter.\",\n      \"progressionTip\": \"Meningkatkan kecepatan naik turun setelah menguasai gerakan secara aman.\"\n    },\n    {\n      \"exercise\": \"Step Up\",\n      \"sets\": 2,\n      \"reps\": 8,\n      \"tempo\": \"Kontrol gerakan (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 45,\n      \"safetyNotes\": \"Pastikan pengguna tidak merasa sakit saat melompat. Jika merasakan nyeri atau kesulitan, segera hentikan dan konsultasikan dengan dokter.\",\n      \"progressionTip\": \"Meningkatkan tinggi lantai yang ditempuh setelah menguasai gerakan secara aman.\"\n    },\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 2,\n      \"reps\": 10,\n      \"tempo\": \"Lambat dan terkontrol (2 detik naik, 2 detik turun)\",\n      \"restSeconds\": 45,\n      \"safetyNotes\": \"Pastikan pengguna tidak merasa sakit saat melompat. Jika merasakan nyeri atau kesulitan, segera hentikan dan konsultasikan dengan dokter.\",\n      \"progressionTip\": \"Meningkatkan tinggi lantai yang ditempuh setelah menguasai gerakan secara aman.\"\n    }\n  ],\n  \"weeklySchedule\": \"Senin: Sit to Stand, Selasa: Step Up, Rabu: Calf Raise, Kamis: Sit to Stand, Jumat: Step Up\"\n}",
+    "prompt_length_chars": 6434
+  },
+  {
+    "persona": "D — 78M Severe (all abnormal + obesity)",
+    "risk": "Severe Risk (Sarcopenia + Low Performance)",
+    "latency_s": 14.1,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 1 exercises (expected 1 — severe/mobilityOnly → 1 exercise)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 635 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 173 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {
+      "severe_or_mobility_only_respected": true,
+      "conservative_for_severe": true
+    },
+    "raw_output": "{\n  \"insight\": \"Pengguna memiliki estimasi risiko tinggi karena massa otot dan kekuatan yang rendah, ditandai dengan lingkar pinggang di atas ambang batas (95 cm untuk pria), yang mengindikasikan penumpukan lemak sentral. Ini menunjukkan potensi sarcopenic obesity, kombinasi massa otot rendah bersamaan dengan penumpukan lemak abdomen. Pengguna juga memiliki lingkar betis di bawah ambang batas (31 cm untuk pria), yang mengindikasikan penurunan massa otot rangka. Riset klinis menunjukkan bahwa kesulitan berdiri dari kursi dan gerakan fungsional bagian bawah tubuh, seperti naik-turun step, dapat menjadi indikator awal sarcopenia pada usia lanjut.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Hindari menahan napas. Pastikan pengguna duduk dengan nyaman di kursi atau dinding untuk mendukung diri.\",\n      \"progressionTip\": \"Bergesekan dengan batas sebelumnya, perlahankan intensitas dan jumlah repetisi.\"\n    }\n  ],\n  \"weeklySchedule\": \"Pengguna hanya melakukan satu sesi latihan Calf Raise dalam seminggu. Latihan dilakukan setiap hari atau setiap dua hari, tergantung pada keadaan pengguna tersebut saat itu.\"\n}",
+    "prompt_length_chars": 6016
+  },
+  {
+    "persona": "E — 68F Red Flags (recent surgery + heart condition)",
+    "risk": "Severe Risk (Sarcopenia + Low Performance)",
+    "latency_s": 15.8,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 1 exercises (expected 1 — severe/mobilityOnly → 1 exercise)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 529 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 236 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {
+      "mentions_professional_for_red_flags": false,
+      "severe_or_mobility_only_respected": true,
+      "conservative_for_severe": true
+    },
+    "raw_output": "{\n    \"insight\": \"Pengguna adalah wanita usia 68 tahun yang memiliki estimasi risiko berat berdasarkan skrining awal. Pengguna tersebut menghadapi beberapa faktor risiko, termasuk riwayat operasi besar atau rawat inap dalam 3 bulan terakhir dan gangguan jantung (berdebar/debat). Risiko ini memerlukan perhatian khusus dalam merancang program latihan. Pengguna juga memiliki lingkar pinggang yang tinggi, yang merupakan tanda awal obesitas sentral. Dengan kondisi ini, pengguna perlu memulai dengan gerakan paling dasar dan aman, yaitu Calf Raise.\",\n    \"exercises\": [\n        {\n            \"exercise\": \"Calf Raise\",\n            \"sets\": 1,\n            \"reps\": 8,\n            \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n            \"restSeconds\": 60,\n            \"safetyNotes\": \"Gerakan ini harus dilakukan dengan sangat hati-hati. Jangan menahan napas selama gerakan. Perlu diperhatikan bahwa pengguna memiliki riwayat operasi besar atau rawat inap dalam 3 bulan terakhir dan gangguan jantung.\",\n            \"progressionTip\": \"Pengguna perlu memulai dengan intensitas sangat rendah, berpegangan pada dinding/kursi. Intensitas dapat ditingkatkan secara bertahap setelah keseimbangan dan kekuatan otot betis meningkat.\"\n        }\n    ],\n    \"weeklySchedule\": \"Perencanaan mingguan: Latihan Calf Raise dilakukan satu kali dalam seminggu, dengan jeda 60 detik antara set. Pengguna perlu memulai dengan intensitas sangat rendah dan dianjurkan untuk berpegangan pada dinding/kursi selama gerakan ini.\"\n}",
+    "prompt_length_chars": 6219
+  },
+  {
+    "persona": "F — 55M Multiple Red Flags + skipped exercises",
+    "risk": "Severe Risk (Sarcopenia + Low Performance)",
+    "latency_s": 12.1,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 1 exercises (expected 1 — severe/mobilityOnly → 1 exercise)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 350 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 107 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {
+      "mentions_professional_for_red_flags": false,
+      "severe_or_mobility_only_respected": true,
+      "conservative_for_severe": true
+    },
+    "raw_output": "{\n  \"insight\": \"Pengguna memiliki risiko berat, terutama karena mengonsumsi obat-obatan rutin (meskipun tidak disebutkan dalam riwayat klinis), tanda keselamatan yang mencakup sering kehilangan keseimbangan dan nyeri sendi/patah tulang, serta kondisi neurologis yang memengaruhi keseimbangan. Ini menunjukkan bahwa pengguna perlu memulai dari gerakan dasar dan aman.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Pengguna harus berpegangan pada dinding atau kursi selama gerakan. Jangan menahan napas.\",\n      \"progressionTip\": \"Meningkatkan intensitas dengan memperpanjang interval istirahat menjadi 90 detik dan/atau menggandakan jumlah repetisi.\"\n    }\n  ],\n  \"weeklySchedule\": \"Latihan dilakukan setiap hari, terdiri dari satu sesi Calf Raise. Istirahat selama 60 detik antara set-set.\"\n}",
+    "prompt_length_chars": 6252
+  },
+  {
+    "persona": "G — 70F Severe + Balance/Dizziness + Skipped Tests",
+    "risk": "Severe Risk (Sarcopenia + Low Performance)",
+    "latency_s": 13.8,
+    "score": "9/9",
+    "grades": {
+      "C1_valid_json": true,
+      "C2_schema_keys": true,
+      "C3_exercise_count": true,
+      "C4_exercise_names": true,
+      "C5_exercise_fields": true,
+      "C6_numeric_types": true,
+      "C7_insight_present": true,
+      "C8_weekly_schedule": true,
+      "C9_no_banned_words": true
+    },
+    "grade_details": {
+      "C1_valid_json": {
+        "pass": true,
+        "detail": "Valid JSON"
+      },
+      "C2_schema_keys": {
+        "pass": true,
+        "detail": "All keys present"
+      },
+      "C3_exercise_count": {
+        "pass": true,
+        "detail": "Got 1 exercises (expected 1 — severe/mobilityOnly → 1 exercise)"
+      },
+      "C4_exercise_names": {
+        "pass": true,
+        "detail": "Names: ['Calf Raise']"
+      },
+      "C5_exercise_fields": {
+        "pass": true,
+        "detail": "All fields present in all exercises"
+      },
+      "C6_numeric_types": {
+        "pass": true,
+        "detail": "All numeric fields are numbers"
+      },
+      "C7_insight_present": {
+        "pass": true,
+        "detail": "Length: 516 chars"
+      },
+      "C8_weekly_schedule": {
+        "pass": true,
+        "detail": "Length: 258 chars"
+      },
+      "C9_no_banned_words": {
+        "pass": true,
+        "detail": "No banned words"
+      }
+    },
+    "safety": {
+      "mentions_professional_for_red_flags": true,
+      "severe_or_mobility_only_respected": true,
+      "conservative_for_severe": true
+    },
+    "raw_output": "{\n  \"insight\": \"Pengguna adalah wanita usia 70 tahun yang memiliki estimasi risiko berat berdasarkan skrining awal. Pengguna menghadapi kondisi fisik yang mempengaruhi massa otot dan kekuatan, dengan lingkar betis yang rendah (29.0 cm) dan tingkat kehilangan keseimbangan atau merasa pusing yang sering. Risiko berat ini menunjukkan bahwa pengguna mungkin memiliki sarcopenia atau penurunan massa otot, yang mempengaruhi kekuatan dan performa fisik. Ini mengarah pada perlunya evaluasi medis profesional untuk konfirmasi diagnostik.\",\n  \"exercises\": [\n    {\n      \"exercise\": \"Calf Raise\",\n      \"sets\": 1,\n      \"reps\": 6,\n      \"tempo\": \"Sangat lambat dan terkontrol (4 detik naik, 4 detik turun)\",\n      \"restSeconds\": 60,\n      \"safetyNotes\": \"Pengguna harus berpegangan pada dinding atau kursi selama latihan untuk memastikan keselamatan. Jangan menahan napas.\",\n      \"progressionTip\": \"Tidak ada peringkat progresif dalam kondisi ini karena intensitas sangat rendah.\"\n    }\n  ],\n  \"weeklySchedule\": \"Pengguna dianjurkan untuk melakukan satu sesi latihan Calf Raise setiap hari, dengan istirahat selama 60 detik antara set. Latihan ini harus dilakukan di bawah pengawasan profesional dan dilaporkan kepada dokter atau fisioterapis jika ada peningkatan gejala.\"\n}",
+    "prompt_length_chars": 6178
+  }
+]

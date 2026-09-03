@@ -32,6 +32,20 @@ nonisolated struct PoseClassifier {
 
     private static let minConfidence: Float = 0.3
 
+    /// True when the whole body — down to the ankles — is in frame. Used to fade
+    /// the on-screen pose guide: prominent while the person is too close (feet cut
+    /// off), faint once they've stepped back and their full body is visible.
+    nonisolated static func fullBodyVisible(_ obs: VNHumanBodyPoseObservation) -> Bool {
+        let required: [VNHumanBodyPoseObservation.JointName] = [
+            .leftShoulder, .rightShoulder, .leftHip, .rightHip,
+            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle,
+        ]
+        for joint in required {
+            guard let p = try? obs.recognizedPoint(joint), p.confidence > 0.2 else { return false }
+        }
+        return true
+    }
+
     nonisolated static func classify(_ obs: VNHumanBodyPoseObservation) -> (PoseKind, Detail) {
         func point(_ joint: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
             guard let p = try? obs.recognizedPoint(joint), p.confidence > minConfidence else { return nil }

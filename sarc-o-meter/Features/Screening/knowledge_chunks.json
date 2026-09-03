@@ -97,5 +97,52 @@
     ],
     "source": "Framing internal, setara \"probable/confirmed sarcopenia\" pada AWGS 2019",
     "content": "Kategori risiko tinggi atau berat berarti massa otot rendah disertai penurunan kekuatan dan/atau performa fisik — kombinasi yang pada AWGS 2019 setara dengan sarcopenia yang probable hingga terkonfirmasi. Pada tahap ini, rekomendasi yang tepat adalah evaluasi langsung oleh dokter atau fisioterapis untuk konfirmasi diagnostik (idealnya dengan pengukuran DXA/BIA dan handgrip strength), bukan hanya mengandalkan program latihan mandiri."
+  },
+  {
+    "id": "kb_exercise_sit_to_stand_01",
+    "tags": [
+      "general_exercise_principles",
+      "low_strength",
+      "limited_ability",
+      "risk_high",
+      "risk_severe"
+    ],
+    "source": "Senior Fitness Test Protocol; Geriatric Physiotherapy Best Practices",
+    "content": "Parameter aman Sit to Stand untuk lansia: (1) KURSI: gunakan kursi kokoh tanpa roda, tinggi dudukan 43-45 cm (setinggi lutut), permukaan keras dan rata, idealnya tanpa sandaran tangan — tapi untuk pengguna dengan kemampuan terbatas, sandaran tangan boleh digunakan sebagai pegangan awal. Letakkan kursi menempel dinding agar tidak bergeser. (2) TEKNIK: duduk di tepi kursi, kaki selebar bahu rata di lantai, condongkan badan ke depan sebelum berdiri, jangan menahan napas. (3) PROGRESIF: mulai dengan bantuan tangan pada sandaran/meja, lalu kurangi bantuan tangan bertahap. Untuk pengguna dengan repetisi terbatas (<5 dalam 30 detik), mulai dari 3 repetisi per set dengan tempo sangat lambat. (4) STOP jika pusing, nyeri dada, atau nyeri tajam yang tidak biasa."
+  },
+  {
+    "id": "kb_exercise_step_up_01",
+    "tags": [
+      "general_exercise_principles",
+      "low_strength",
+      "limited_ability",
+      "risk_high",
+      "risk_severe"
+    ],
+    "source": "Geriatric Exercise Prescription Guidelines; NIH Clinical Protocols",
+    "content": "Parameter aman Step Up untuk lansia: (1) TINGGI STEP: mulai dari 14-15 cm (setinggi satu anak tangga rendah) untuk pengguna dengan kemampuan terbatas. Maksimum 20 cm untuk pemula lansia. JANGAN gunakan step lebih dari 20 cm tanpa supervisi profesional. (2) PEGANGAN: WAJIB ada pegangan kokoh (railing tangga, dinding, atau kursi berat) di samping step. Pengguna dengan kemampuan terbatas harus selalu berpegangan dengan minimal satu tangan. (3) ALAS KAKI: gunakan sepatu anti-slip, pastikan permukaan step tidak licin. (4) TEKNIK: letakkan seluruh telapak kaki di atas step, jaga tubuh tegak, kontrol gerakan turun (fase eksentrik) lebih lambat dari naik. Bergantian kaki kiri dan kanan. (5) PROGRESIF: tingkatkan jumlah repetisi dulu sebelum menambah tinggi step. Untuk pengguna dengan repetisi terbatas (<4 dalam 30 detik), mulai dari 3 repetisi per kaki dengan istirahat panjang."
+  },
+  {
+    "id": "kb_exercise_calf_raise_01",
+    "tags": [
+      "general_exercise_principles",
+      "low_strength",
+      "limited_ability",
+      "risk_high",
+      "risk_severe"
+    ],
+    "source": "Geriatric Exercise Prescription; Fall Prevention Protocols",
+    "content": "Parameter aman Calf Raise untuk lansia: (1) PEGANGAN: WAJIB berpegangan pada permukaan kokoh (meja dapur, sandaran kursi berat, dinding). Untuk pengguna dengan kemampuan sangat terbatas, gunakan kedua tangan sebagai pegangan. (2) POSISI: berdiri tegak, kaki selebar pinggul, berat badan merata di kedua kaki. (3) TINGGI ANGKATAN: angkat tumit setinggi yang nyaman — tidak perlu berjinjit maksimal. Untuk pemula, angkatan kecil 3-5 cm sudah cukup. Turunkan tumit perlahan ke lantai (jangan hentakkan). (4) PERMUKAAN: lakukan di permukaan rata dan tidak licin (karpet atau mat anti-slip). JANGAN lakukan di tepi tangga kecuali sudah tingkat lanjut dan ada pegangan kokoh. (5) PROGRESIF: mulai dengan kedua kaki bersamaan. Setelah nyaman (2-4 minggu), coba lepaskan satu tangan dari pegangan. Latihan satu kaki hanya setelah kekuatan cukup dan disetujui profesional."
+  },
+  {
+    "id": "kb_limited_ability_01",
+    "tags": [
+      "low_strength",
+      "limited_ability",
+      "risk_high",
+      "risk_severe"
+    ],
+    "source": "Prinsip progressive overload dan exercise prescription geriatri (ACSM Guidelines for Exercise Testing and Prescription, 11th Ed)",
+    "content": "Jika seseorang BISA melakukan latihan tetapi dengan jumlah repetisi terbatas di bawah ambang normal, ini menunjukkan kemampuan fungsional yang menurun tapi BUKAN ketidakmampuan total. Prinsip resep latihan: (1) VOLUME AWAL: mulai dari 50-70% jumlah repetisi yang berhasil dilakukan saat tes (minimal 3 repetisi per set), dengan 1 set per sesi. (2) TEMPO: sangat lambat dan terkontrol (3-4 detik per fase naik dan turun). (3) ISTIRAHAT: 60-90 detik antar set. (4) FREKUENSI: 2x per minggu dengan jeda minimal 48 jam. (5) PROGRESI: tingkatkan 1-2 repetisi per 2 minggu jika tidak ada keluhan. Setelah mampu 2 set penuh, baru tambah set ketiga. (6) SEMUA 3 LATIHAN tetap diresepkan karena pengguna sudah menunjukkan kemampuan melakukannya — masing-masing dengan parameter yang disesuaikan berdasarkan repetisi tes per latihan."
   }
 ]

@@ -20,6 +20,7 @@
 //  device, this is the knob to change (try `.right`, `.left`, `.rightMirrored`).
 
 import AVFoundation
+import AudioToolbox     // AudioServicesPlaySystemSound (capture "beep")
 import Combine          // ObservableObject / @Published
 import Vision
 import CoreImage
@@ -37,7 +38,9 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
     @Published var guidance = "Hadap kamera, berdiri dengan pose A"
     @Published var progress: Double = 0        // 0…1 hold-to-capture progress
     @Published var poseDetected = false
+    @Published var bodyVisible = false         // whole body (to the ankles) in frame
     @Published var authorized = true
+    @Published var isTransitioning = false
 
     /// Called on the main queue when both photos are captured.
     var onComplete: ((_ front: UIImage, _ side: UIImage) -> Void)?
@@ -50,8 +53,8 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
 
     // Frame-logic state — touched only on sessionQueue (serial), so no locking.
     private var logicPhase: Phase = .front
-    private var holdCount = 0
-    private let holdNeeded = 12                 // frames of a steady pose before capturing
+    private var holdStartTime: Date?
+    private var isTransitioningInternal = false
     private var frontImage: UIImage?
     private var configured = false
 
@@ -101,58 +104,100 @@ nonisolated final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDa
                        didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         guard logicPhase != .done,
+              !isTransitioningInternal,
               let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         // Detect + classify (a fresh request per frame keeps this fully local).
         let request = VNDetectHumanBodyPoseRequest()
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
         try? handler.perform([request])
-        let kind: PoseKind = request.results?.first.map { PoseClassifier.classify($0).0 } ?? .none
+        let observation = request.results?.first
+        let kind: PoseKind = observation.map { PoseClassifier.classify($0).0 } ?? .none
+        let fullyVisible = observation.map { PoseClassifier.fullBodyVisible($0) } ?? false
 
+        // Require the whole body in frame before a pose can count — this stops the
+        // capture from firing while the person is still too close to the camera.
         let target: PoseKind = (logicPhase == .front) ? .frontAPose : .side
-        let match = (kind == target)
-        holdCount = match ? holdCount + 1 : 0
+        let match = fullyVisible && (kind == target)
 
-        var publishPhase = logicPhase
-        var publishProgress = min(1, Double(holdCount) / Double(holdNeeded))
-        var publishGuidance = guidanceText(phase: logicPhase, matching: match)
-        var captured = false
-        var finished: (UIImage, UIImage)?
+        let now = Date()
+        if match {
+            if holdStartTime == nil {
+                holdStartTime = now
+            }
+        } else {
+            holdStartTime = nil
+        }
 
-        // Threshold reached: grab THIS frame now, while the buffer is valid.
-        if holdCount >= holdNeeded, let image = uprightImage(from: pixelBuffer) {
-            holdCount = 0
-            captured = true
-            publishProgress = 0
-            switch logicPhase {
-            case .front:
+        let targetHoldDuration: TimeInterval = (logicPhase == .front) ? 2.0 : 1.0
+        let elapsed = holdStartTime != nil ? now.timeIntervalSince(holdStartTime!) : 0
+        let publishProgress = min(1.0, elapsed / targetHoldDuration)
+        let publishGuidance = guidanceText(phase: logicPhase, matching: match, fullyVisible: fullyVisible)
+
+        // Threshold reached (2s hold for front, 1s hold for side): grab THIS frame now, while buffer is valid.
+        if elapsed >= targetHoldDuration, let image = uprightImage(from: pixelBuffer) {
+            holdStartTime = nil
+            isTransitioningInternal = true
+
+            let currentPhase = logicPhase
+            if currentPhase == .front {
                 frontImage = image
                 logicPhase = .side
-                publishPhase = .side
-                publishGuidance = "Bagus — sekarang putar 90° ke samping"
-            case .side:
+            } else if currentPhase == .side {
                 logicPhase = .done
-                publishPhase = .done
-                publishGuidance = "Selesai"
-                if let front = frontImage { finished = (front, image) }
-            case .done:
-                break
             }
+
+            let transitionDelay: TimeInterval = (currentPhase == .front) ? 2.0 : 1.0
+
+            DispatchQueue.main.async {
+                self.progress = 1.0
+                self.poseDetected = true
+                self.isTransitioning = true
+
+                // Feedback haptic + sound
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                AudioServicesPlaySystemSound(1057)
+
+                // 2-second loading animation for front, 1-second for side before moving on
+                DispatchQueue.main.asyncAfter(deadline: .now() + transitionDelay) {
+                    if currentPhase == .front {
+                        self.phase = .side
+                        self.guidance = "Putar 90° ke samping, tangan rileks"
+                        self.progress = 0
+                        self.poseDetected = false
+                        self.isTransitioning = false
+                        self.sessionQueue.async {
+                            self.isTransitioningInternal = false
+                        }
+                    } else if currentPhase == .side {
+                        self.phase = .done
+                        self.isTransitioning = false
+                        if let front = self.frontImage {
+                            self.onComplete?(front, image)
+                        }
+                    }
+                }
+            }
+            return
         }
 
         DispatchQueue.main.async {
-            self.phase = publishPhase
+            self.phase = self.logicPhase
             self.poseDetected = match
+            self.bodyVisible = fullyVisible
             self.progress = publishProgress
             self.guidance = publishGuidance
-            if captured { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-            if let f = finished { self.onComplete?(f.0, f.1) }
         }
     }
 
     // MARK: Helpers
 
-    private func guidanceText(phase: Phase, matching: Bool) -> String {
+    private func guidanceText(phase: Phase, matching: Bool, fullyVisible: Bool) -> String {
+        // Getting the whole body in frame comes first — nothing else matters until
+        // the person has stepped back far enough.
+        if !fullyVisible && phase != .done {
+            return "Mundur beberapa langkah sampai seluruh tubuh Anda terlihat"
+        }
         switch phase {
         case .front: return matching ? "Tahan…" : "Hadap kamera, rentangkan tangan membentuk pose A, kaki dibuka"
         case .side:  return matching ? "Tahan…" : "Putar 90° ke samping, tangan rileks"
