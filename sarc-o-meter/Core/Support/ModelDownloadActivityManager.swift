@@ -13,9 +13,13 @@ final class ModelDownloadActivityManager {
 
     private var currentActivity: Activity<ModelDownloadActivityAttributes>?
 
-    func startActivity(modelName: String) {
-        // End semua activity lama yang masih tertinggal dari sesi sebelumnya
-        for activity in Activity<ModelDownloadActivityAttributes>.activities {
+    /// Bersihkan semua Live Activity yang masih tertinggal dari sesi sebelumnya.
+    /// Panggil ini saat app launch atau saat app kembali ke foreground.
+    func cleanupStaleActivities() {
+        let activities = Activity<ModelDownloadActivityAttributes>.activities
+        guard !activities.isEmpty else { return }
+        print("[LiveActivity] 🧹 Membersihkan \(activities.count) activity lama…")
+        for activity in activities {
             let state = ModelDownloadActivityAttributes.ContentState(
                 progress: 1.0, percent: 100, progressText: "Selesai"
             )
@@ -26,7 +30,33 @@ final class ModelDownloadActivityManager {
                 )
             }
         }
+        currentActivity = nil
+    }
 
+    func startActivity(modelName: String) {
+        // End semua activity lama yang masih tertinggal dari sesi sebelumnya
+        // dan tunggu sampai selesai agar tidak race dengan activity baru.
+        let staleActivities = Activity<ModelDownloadActivityAttributes>.activities
+        if !staleActivities.isEmpty {
+            Task {
+                for activity in staleActivities {
+                    let state = ModelDownloadActivityAttributes.ContentState(
+                        progress: 1.0, percent: 100, progressText: "Selesai"
+                    )
+                    await activity.end(
+                        ActivityContent(state: state, staleDate: nil),
+                        dismissalPolicy: .immediate
+                    )
+                }
+                // Setelah cleanup selesai, mulai activity baru
+                beginActivity(modelName: modelName)
+            }
+        } else {
+            beginActivity(modelName: modelName)
+        }
+    }
+
+    private func beginActivity(modelName: String) {
         let authInfo = ActivityAuthorizationInfo()
 
         if authInfo.areActivitiesEnabled {
@@ -85,7 +115,12 @@ final class ModelDownloadActivityManager {
         )
 
         do {
-            let content = ActivityContent(state: initialState, staleDate: nil)
+            // staleDate 30 detik ke depan — jika app mati dan tidak update,
+            // iOS akan menandai activity sebagai stale.
+            let content = ActivityContent(
+                state: initialState,
+                staleDate: Date().addingTimeInterval(30)
+            )
             currentActivity = try Activity<ModelDownloadActivityAttributes>.request(
                 attributes: attributes,
                 content: content,
@@ -112,7 +147,11 @@ final class ModelDownloadActivityManager {
         )
 
         Task {
-            let content = ActivityContent(state: updatedState, staleDate: nil)
+            // Perpanjang staleDate setiap update, sehingga iOS tahu activity masih aktif
+            let content = ActivityContent(
+                state: updatedState,
+                staleDate: Date().addingTimeInterval(30)
+            )
             await currentActivity.update(content)
         }
     }
@@ -127,9 +166,31 @@ final class ModelDownloadActivityManager {
 
         Task {
             let content = ActivityContent(state: finalState, staleDate: nil)
-            await currentActivity.end(content, dismissalPolicy: .default)
+            await currentActivity.end(content, dismissalPolicy: .immediate)
             print("[LiveActivity] ✅ Berhasil dihentikan")
         }
         self.currentActivity = nil
+    }
+
+    /// Hentikan semua Live Activity yang sedang aktif.
+    /// Gunakan saat app masuk ke background/terminated saat download berlangsung.
+    func endAllActivities() {
+        let activities = Activity<ModelDownloadActivityAttributes>.activities
+        guard !activities.isEmpty else { return }
+        print("[LiveActivity] 🛑 App going background — ending \(activities.count) activities")
+        for activity in activities {
+            let state = ModelDownloadActivityAttributes.ContentState(
+                progress: activity.content.state.progress,
+                percent: activity.content.state.percent,
+                progressText: "Unduhan dijeda — buka app untuk melanjutkan"
+            )
+            Task {
+                await activity.end(
+                    ActivityContent(state: state, staleDate: nil),
+                    dismissalPolicy: .immediate
+                )
+            }
+        }
+        currentActivity = nil
     }
 }
