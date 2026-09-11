@@ -32,6 +32,7 @@ final class LLMManager {
     var isLoaded = false
     var progressText = ""
     var progressValue = 0.0
+    var lastError: String? = nil
 
     private var container: ModelContainer?
     private var instructions: String?
@@ -48,8 +49,11 @@ final class LLMManager {
     /// concurrent callers join the same in-flight load rather than downloading twice.
     @MainActor
     func loadModel() async {
-        if isLoaded { return }
-        if let loadTask { await loadTask.value; return }
+        if isLoaded && container != nil { return }
+        if let existing = loadTask {
+            await existing.value
+            if isLoaded && container != nil { return }
+        }
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.performLoad()
@@ -93,8 +97,12 @@ final class LLMManager {
             progressValue = 1.0
             print("MLX model loaded: \(modelID)")
         } catch {
+            lastError = error.localizedDescription
             progressText = "Failed to load model: \(error.localizedDescription)"
             print("MLX load failed: \(error)")
+            container = nil
+            isLoaded = false
+            loadTask = nil
         }
         isLoading = false
     }
@@ -106,7 +114,10 @@ final class LLMManager {
 
     @MainActor
     func sendMessage(_ prompt: String) async -> String? {
-        guard let container else { return nil }
+        guard let container else {
+            lastError = "Model container is nil (model not loaded or not downloaded)"
+            return nil
+        }
         isLoading = true
         outputText = ""
         defer { isLoading = false }
@@ -119,6 +130,7 @@ final class LLMManager {
                 outputText += chunk
             }
         } catch {
+            lastError = error.localizedDescription
             outputText += "\n[Error generating response: \(error.localizedDescription)]"
         }
         return outputText

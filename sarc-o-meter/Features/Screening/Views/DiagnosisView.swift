@@ -13,6 +13,10 @@ struct DiagnosisView: View {
     let exercises: [Workout]       // detailed exercise prescription
     let weeklySchedule: String?    // weekly schedule text
     let isGenerating: Bool
+    var isFallback: Bool = false
+    var isPlanFallback: Bool = false
+    var fallbackReason: String? = nil
+    var onRetry: (() -> Void)? = nil
     let onFinish: () -> Void
 
     var body: some View {
@@ -120,19 +124,68 @@ struct DiagnosisView: View {
         if isGenerating {
             VStack(spacing: 14) {
                 ProgressView().tint(Theme.accent)
-                Text("Menyusun analisis di perangkat…")
+                Text("Menyusun analisis kondisi di perangkat…")
                     .font(.system(size: 14)).foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 28)
         } else if let analysis, !analysis.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Label("Analisis Kondisi", systemImage: "text.bubble.fill")
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
+
+                // Note explaining fallback reason if applicable
+                if isFallback, let reason = fallbackReason, !reason.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.red)
+                        Text(reason)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                }
+
                 Text(analysis)
                     .font(.system(size: 14)).foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true).lineSpacing(3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
+            .shadow(color: Theme.cardShadow, radius: 8, y: 4)
+        } else {
+            VStack(spacing: 12) {
+                Label("Analisis Kondisi", systemImage: "exclamationmark.triangle")
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(.red)
+                if let reason = fallbackReason, !reason.isEmpty {
+                    Text(reason)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                } else {
+                    Text("Analisis kondisi belum selesai dibuat (LLM gagal).")
+                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                }
+                if let onRetry {
+                    Button(action: onRetry) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Coba Lagi")
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
             .padding(18)
             .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.corner))
             .shadow(color: Theme.cardShadow, radius: 8, y: 4)

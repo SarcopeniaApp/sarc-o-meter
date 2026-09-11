@@ -50,12 +50,14 @@ struct ContentView: View {
     @State private var predictor: BMNetPredictor? = try? BMNetPredictor()
     @State private var llm = LLMManager()
 
-    // Screening flow state (moved here from the former ScreeningFlowView).
     @State private var ruleResult: AssessmentResult?
     @State private var analysisText: String?
     @State private var plan: [Workout] = []
     @State private var weeklySchedule: String?
     @State private var isGenerating = false
+    @State private var isAnalysisFallback = false
+    @State private var isPlanFallback = false
+    @State private var analysisFallbackReason: String? = nil
 
     // Indonesian display name per exercise (the screen title + the "next" label).
     private static func exerciseName(_ mode: ExerciseMode) -> String {
@@ -190,6 +192,10 @@ struct ContentView: View {
                     exercises: plan,
                     weeklySchedule: weeklySchedule,
                     isGenerating: isGenerating,
+                    isFallback: isAnalysisFallback,
+                    isPlanFallback: isPlanFallback,
+                    fallbackReason: analysisFallbackReason,
+                    onRetry: { runAnalysis() },
                     onFinish: { finishScreening() }
                 )
             }
@@ -236,37 +242,108 @@ struct ContentView: View {
         ruleResult = result
         analysisText = nil
         weeklySchedule = nil
+        analysisFallbackReason = nil
         isGenerating = true
         step = .analysis
 
         Task {
             await llm.loadModel()   // no-op if the shell already loaded it at launch
-            llm.appendSystemMessage(OnDeviceRAG.getSystemPrompt())
-            let prompt = OnDeviceRAG.buildPrompt(
-                question: "Buat rencana latihan yang aman dan detail berdasarkan profil saya.",
-                result: result,
-                user: user,
-                maxChunks: 3
-            )
-            let raw = await llm.sendMessage(prompt) ?? ""
 
-            if let parsed = OnDeviceRAG.parse(raw, result: result) {
-                analysisText = parsed.analysis
-                plan = parsed.plan
-                weeklySchedule = parsed.weeklySchedule
-            } else {
-                analysisText = OnDeviceRAG.extractInsight(from: raw)
-                plan = ExercisePlan.derive(from: result)
-                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+            let maxAttempts = 3
+            var generatedAnalysis: String? = nil
+            var generatedPlan: [Workout] = []
+            var generatedSchedule: String? = nil
+            var lastRawOutput = ""
+
+            let modelReady = llm.isLoaded
+
+            if modelReady {
+                for attempt in 1...maxAttempts {
+                    print("[ScreeningAnalysis] Attempt \(attempt) of \(maxAttempts) generating condition analysis…")
+                    llm.appendSystemMessage(OnDeviceRAG.getSystemPrompt())
+                    let prompt = OnDeviceRAG.buildPrompt(
+                        question: "Buat rencana latihan yang aman dan detail berdasarkan profil saya.",
+                        result: result,
+                        user: user,
+                        maxChunks: 3
+                    )
+                    let raw = await llm.sendMessage(prompt) ?? ""
+                    lastRawOutput = raw
+
+                    if let parsed = OnDeviceRAG.parse(raw, result: result),
+                       !parsed.analysis.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       parsed.analysis != "—" {
+                        generatedAnalysis = parsed.analysis
+                        generatedPlan = parsed.plan
+                        generatedSchedule = parsed.weeklySchedule
+                        isAnalysisFallback = false
+                        isPlanFallback = false
+                        analysisFallbackReason = nil
+                        print("[ScreeningAnalysis] Successfully parsed complete output on attempt \(attempt)")
+                        break
+                    } else if let insight = OnDeviceRAG.extractInsight(from: raw),
+                              !insight.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        generatedAnalysis = insight
+                        generatedPlan = ExercisePlan.derive(from: result)
+                        generatedSchedule = ExercisePlan.weeklySchedule(for: result)
+                        isAnalysisFallback = false
+                        isPlanFallback = true
+                        analysisFallbackReason = nil
+                        print("[ScreeningAnalysis] Successfully extracted insight on attempt \(attempt)")
+                        break
+                    } else {
+                        print("[ScreeningAnalysis] Attempt \(attempt) did not yield condition analysis. Raw response length: \(raw.count)")
+                        if attempt < maxAttempts {
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                        }
+                    }
+                }
+            }
+
+            // Fallback: If all model attempts failed or model not ready
+            if generatedAnalysis == nil || generatedAnalysis?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true {
+                let reason: String
+                if !modelReady {
+                    if llm.progressValue > 0 && llm.progressValue < 1.0 {
+                        let pct = Int(llm.progressValue * 100)
+                        reason = "Model AI on-device (~1.8 GB) belum selesai diunduh (\(pct)%). Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                    } else if let err = llm.lastError, !err.isEmpty {
+                        reason = "Model AI on-device belum selesai diunduh atau gagal dimuat (\(err)). Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                    } else {
+                        reason = "Model AI on-device belum selesai diunduh atau belum siap di memori perangkat. Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                    }
+                } else if lastRawOutput.contains("[Error generating response") {
+                    reason = "Model AI sudah diunduh, tetapi gagal saat inferensi GPU/Metal (error runtime). Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                } else if lastRawOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    reason = "Model AI sudah diunduh, tetapi tidak menghasilkan teks balasan setelah \(maxAttempts) kali percobaan (output kosong). Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                } else {
+                    reason = "Model AI sudah diunduh, tetapi format respon yang dihasilkan tidak sesuai standar setelah \(maxAttempts) kali percobaan. Sistem mengalihkan ke analisis klinis deterministik berbasis aturan AWGS."
+                }
+
+                print("[ScreeningAnalysis] Using deterministic fallback. Reason: \(reason)")
+                analysisFallbackReason = reason
+                generatedAnalysis = OnDeviceRAG.fallbackAnalysis(for: result, user: user, reason: reason)
+                isAnalysisFallback = true
+                isPlanFallback = true
+                if generatedPlan.isEmpty {
+                    generatedPlan = ExercisePlan.derive(from: result)
+                }
+                if generatedSchedule == nil {
+                    generatedSchedule = ExercisePlan.weeklySchedule(for: result)
+                }
             }
 
             // Safety override: mobility-only restriction or severe risk always forces
             // the deterministic single-exercise plan, regardless of LLM output.
             if result.workoutRestriction == .mobilityOnly || result.overallRisk == .severe {
-                plan = ExercisePlan.derive(from: result)
-                weeklySchedule = ExercisePlan.weeklySchedule(for: result)
+                generatedPlan = ExercisePlan.derive(from: result)
+                generatedSchedule = ExercisePlan.weeklySchedule(for: result)
+                isPlanFallback = true
             }
 
+            analysisText = generatedAnalysis
+            plan = generatedPlan
+            weeklySchedule = generatedSchedule
             isGenerating = false
         }
     }
