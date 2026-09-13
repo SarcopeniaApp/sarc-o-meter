@@ -141,7 +141,7 @@ struct ExerciseView: View {
             },
             trailing: {
                 HStack(spacing: 4) {
-                    Text("Show Landmarks")
+                    Text("Tampilkan Landmarks")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.muted)
                     Toggle("", isOn: $showSkeleton)

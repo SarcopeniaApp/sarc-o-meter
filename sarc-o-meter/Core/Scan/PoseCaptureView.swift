@@ -19,7 +19,7 @@ struct PoseCaptureView: View {
 
     var body: some View {
         PageWrapper(
-            title: "Scan Tubuh",
+            title: "Pindai Tubuh",
             content: {
                 GeometryReader { geo in
                     let availableHeight = geo.size.height
@@ -173,7 +173,7 @@ struct PoseCaptureView: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
