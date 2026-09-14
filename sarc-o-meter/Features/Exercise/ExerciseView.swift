@@ -340,10 +340,6 @@ struct ExerciseCompletionSheet: View {
     @Binding var reps: Int
     let onDone: (Int) -> Void
 
-    @State private var isEditing: Bool = false
-    @State private var repsString: String = ""
-    @FocusState private var isInputFocused: Bool
-
     var body: some View {
         VStack(spacing: 20) {
             // Header: Icon Done Hijau + Tulisan Selesai & Nama Latihan
@@ -369,77 +365,65 @@ struct ExerciseCompletionSheet: View {
             }
             .padding(.top, 24)
 
-            // Qty Reps Section + Edit Button
+            // Qty Reps Section: - (angka reps) +
             HStack(spacing: 12) {
-                if isEditing {
-                    HStack(spacing: 8) {
-                        Text("Reps:")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.ink)
+                Text("Total Reps")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.ink)
 
-                        TextField("Qty", text: $repsString)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 75, height: 40)
-                            .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Theme.accent, lineWidth: 2)
+                Spacer()
+
+                HStack(spacing: 14) {
+                    // Tombol Minus (-)
+                    Button {
+                        if reps > 0 {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                reps -= 1
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(reps > 0 ? Theme.accent : Theme.faint)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(reps > 0 ? Theme.accent.opacity(0.12) : Color(.systemGray6))
                             )
-                            .focused($isInputFocused)
-
-                        Text("x")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Theme.ink)
+                            .overlay(
+                                Circle()
+                                    .stroke(reps > 0 ? Theme.accent.opacity(0.25) : Color.clear, lineWidth: 1)
+                            )
                     }
+                    .disabled(reps <= 0)
+                    .contentShape(Circle())
 
-                    Spacer()
-
-                    Button {
-                        commitEdit()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Selesai")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.accent, in: Capsule())
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Text("Reps:")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.muted)
-
-                        Text("\(reps)x")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.accent)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        repsString = "\(reps)"
-                        isEditing = true
-                        isInputFocused = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Edit")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
+                    // Angka Reps
+                    Text("\(reps)")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                        .frame(minWidth: 38)
+                        .contentTransition(.numericText())
+
+                    // Tombol Plus (+)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            reps += 1
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(Theme.accent)
+                            )
+                            .shadow(color: Theme.accent.opacity(0.28), radius: 4, y: 2)
                     }
+                    .contentShape(Circle())
                 }
             }
             .padding(.horizontal, 18)
@@ -451,27 +435,11 @@ struct ExerciseCompletionSheet: View {
 
             // Primary Button (Lanjut ke [Next] atau Selesai)
             PrimaryButton(title: nextExerciseName != nil ? "Lanjut ke \(nextExerciseName!)" : "Selesai") {
-                if isEditing {
-                    commitEdit()
-                }
                 onDone(reps)
             }
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 24)
-        .onAppear {
-            repsString = "\(reps)"
-        }
-    }
-
-    private func commitEdit() {
-        if let val = Int(repsString), val >= 0 {
-            reps = val
-        } else {
-            repsString = "\(reps)"
-        }
-        isEditing = false
-        isInputFocused = false
     }
 }
 
