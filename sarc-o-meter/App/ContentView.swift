@@ -94,7 +94,7 @@ struct ContentView: View {
     private var content: some View {
         switch step {
         case .greeting:
-            GreetingScreen() {
+            GreetingScreen(llm: llm) {
                 step = .gender
             }
         case .gender:

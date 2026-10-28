@@ -342,7 +342,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SarcoFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take front and side photos to estimate your body measurements.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Send each processing step to the Mac debug server on your local network.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pick front and side photos to estimate your body measurements.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -377,7 +381,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SarcoFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take front and side photos to estimate your body measurements.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Send each processing step to the Mac debug server on your local network.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pick front and side photos to estimate your body measurements.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

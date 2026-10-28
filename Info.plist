@@ -2,12 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCameraUsageDescription</key>
-	<string>Take front and side photos to estimate your body measurements.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pick front and side photos to estimate your body measurements.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Send each processing step to the Mac debug server on your local network.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
