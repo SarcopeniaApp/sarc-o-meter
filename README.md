@@ -19,22 +19,30 @@ TestFlight Beta: https://testflight.apple.com/join/87X3gjtV
 
 ---
 
-## System Architecture
+## Three-Tier System Architecture
 
-- UI Layer: SwiftUI, custom design system, camera previews, and real-time pose overlays.
-- Body Measurement Pipeline:
-  - Photo input (upright-corrected)
-  - Person segmentation (`VNGeneratePersonSegmentationRequest`)
-  - Silhouette concatenation (front + side view)
-  - Core ML model (`bmnet.mlpackage`) inference producing 14 body metrics
-- Exercise Pose Pipeline:
-  - Video frame processing with MediaPipe Pose Landmarker
-  - Landmark smoothing and joint angle calculation
-  - Finite-state rep counters (`RepCounter.swift`) with form checking
-- Clinical Assessment Engine:
-  - AWGS 2019 diagnostic rule evaluation (`RuleEngine.swift`)
-  - Safety screening (cardiovascular, balance, surgical history)
-  - Local RAG knowledge retrieval (`OnDeviceRAG.swift`, `knowledge_chunks.json`)
+### Tier 1: Body Pose Estimation & Real-Time Motion Tracking
+- Captures body landmarks in real-time via camera using Apple Vision and MediaPipe Pose Landmarker (`pose_landmarker.task`).
+- Generates precise silhouettes for automated body measurement during static capture.
+- Tracks joint angles and validates movement form with automated repetition counting during functional strength tests (Sit-to-Stand, Step-Up, Calf Raise).
+
+### Tier 2: Automated Body Measurements & Clinical Integration
+- Processes silhouette masks through the Core ML `BMNet` model to compute 14 anthropometric measurements.
+- Evaluates key biomarkers (calf circumference for muscle mass, waist circumference/WHtR for central obesity).
+- Integrates inputs into a deterministic on-device AWGS 2019 Rule Engine to classify risk (Normal, Limited, Abnormal).
+
+### Tier 3: On-Device LLM & RAG Implementation
+- Operates locally on Apple Silicon / Metal GPU via MLX Swift (`mlx-community/Qwen2.5-3B-Instruct-4bit`).
+- Retrieves verified clinical guidance and exercise protocols through on-device RAG (`knowledge_chunks.json`).
+- Synthesizes personalized, plain-language health explanations and tailored physical therapy plans without external network calls.
+
+---
+
+## Team Contributions
+
+- Surya Ramadhani: Body Pose Estimation & Tracking (Vision/Core ML segmentation, static silhouette generation, real-time joint angle calculation, and automated exercise rep counters).
+- Kemal Dwi Heldy Muhammad: Automated Body Measurements & Integration (BMNet model pipeline, 14-metric extraction, and AWGS 2019 deterministic rule engine implementation).
+- Vira Fitriyani: LLM & RAG Implementation (On-device LLM integration via MLX Swift, local RAG architecture, knowledge base curation, and personalized exercise plan generation).
 
 ---
 
@@ -87,6 +95,7 @@ Ensure the following privacy descriptions are configured:
 | `NSPhotoLibraryUsageDescription` | "Pick body photos for measurement." | Photo picker access |
 | `NSLocalNetworkUsageDescription` | "Send debug logs to the Mac." | Developer live-streaming to Mac debug server |
 | `NSAppTransportSecurity` -> `NSAllowsLocalNetworking` | `YES` | Allow local HTTP streaming to the debug server |
+| `ITSAppUsesNonExemptEncryption` | `NO` | Export compliance declaration for App Store / TestFlight |
 
 ### 3. Build & Run
 
@@ -131,4 +140,3 @@ If the debug server field is left empty, the app logs all diagnostic details to 
 ## Disclaimer
 
 Sarc-o-meter is designed for preliminary functional screening, educational, and fitness monitoring purposes. It does not replace professional medical diagnosis, laboratory muscle mass assessment (such as DXA or BIA), or formal clinical evaluation.
-

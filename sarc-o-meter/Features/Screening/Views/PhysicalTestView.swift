@@ -72,6 +72,8 @@ struct PhysicalTestView: View {
         case .normal:
             DecimalField(title: "Tes berdiri dari kursi", subtitle: "Detik untuk berdiri dari kursi 5 kali",
                          unit: "dtk", value: $test.chairStandTestSeconds)
+//            DecimalField(title: "Kecepatan jalan", subtitle: "Kecepatan berjalan santai Anda",
+//                         unit: "m/dtk", value: $test.gaitSpeedMetersPerSecond)
         case .limited:
             DecimalField(title: "Timed Up & Go", subtitle: "Detik untuk berdiri, jalan 3 m, berputar, dan duduk",
                          unit: "dtk", value: $test.timedUpAndGoSeconds)
