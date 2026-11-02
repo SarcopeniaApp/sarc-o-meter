@@ -6,13 +6,24 @@
     {
       "layers" : [
         {
-          "image-name" : "ChatGPT Image 18 Agu 2026, 13.41.15 1.png",
-          "name" : "ChatGPT Image 18 Agu 2026, 13.41.15 1",
+          "image-name" : "otot kanan 1.png",
+          "name" : "otot kanan 1",
           "position" : {
-            "scale" : 0.23,
+            "scale" : 0.2,
             "translation-in-points" : [
-              0,
-              0
+              134,
+              117
+            ]
+          }
+        },
+        {
+          "image-name" : "otot kiri 1.png",
+          "name" : "otot kiri 1",
+          "position" : {
+            "scale" : 0.2,
+            "translation-in-points" : [
+              -103,
+              -156.69999999999993
             ]
           }
         }

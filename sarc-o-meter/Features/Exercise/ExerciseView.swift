@@ -141,7 +141,7 @@ struct ExerciseView: View {
             },
             trailing: {
                 HStack(spacing: 4) {
-                    Text("Show Landmarks")
+                    Text("Tampilkan Landmarks")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.muted)
                     Toggle("", isOn: $showSkeleton)
@@ -365,41 +365,65 @@ struct ExerciseCompletionSheet: View {
             }
             .padding(.top, 24)
 
-            // Qty Reps Section dengan tombol - dan + (angka reps di tengah)
+            // Qty Reps Section: - (angka reps) +
             HStack(spacing: 12) {
-                Text("Reps:")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Theme.muted)
+                Text("Total Reps")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.ink)
 
                 Spacer()
 
                 HStack(spacing: 14) {
+                    // Tombol Minus (-)
                     Button {
-                        if reps > 0 { reps -= 1 }
+                        if reps > 0 {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                reps -= 1
+                            }
+                        }
                     } label: {
                         Image(systemName: "minus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(reps > 0 ? Theme.accent : Theme.muted.opacity(0.4))
-                            .frame(width: 36, height: 36)
-                            .background(reps > 0 ? Theme.accent.opacity(0.12) : Color.gray.opacity(0.1), in: Circle())
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(reps > 0 ? Theme.accent : Theme.faint)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(reps > 0 ? Theme.accent.opacity(0.12) : Color(.systemGray6))
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(reps > 0 ? Theme.accent.opacity(0.25) : Color.clear, lineWidth: 1)
+                            )
                     }
                     .disabled(reps <= 0)
+                    .contentShape(Circle())
 
-                    Text("\(reps)x")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                    // Angka Reps
+                    Text("\(reps)")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.accent)
-                        .frame(minWidth: 48)
-                        .multilineTextAlignment(.center)
+                        .frame(minWidth: 38)
+                        .contentTransition(.numericText())
 
+                    // Tombol Plus (+)
                     Button {
-                        reps += 1
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            reps += 1
+                        }
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 36, height: 36)
-                            .background(Theme.accent.opacity(0.12), in: Circle())
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(Theme.accent)
+                            )
+                            .shadow(color: Theme.accent.opacity(0.28), radius: 4, y: 2)
                     }
+                    .contentShape(Circle())
                 }
             }
             .padding(.horizontal, 18)
@@ -418,5 +442,4 @@ struct ExerciseCompletionSheet: View {
         .padding(.bottom, 24)
     }
 }
-
 

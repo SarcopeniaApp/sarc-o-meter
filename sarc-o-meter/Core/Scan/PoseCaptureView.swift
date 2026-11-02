@@ -19,7 +19,7 @@ struct PoseCaptureView: View {
 
     var body: some View {
         PageWrapper(
-            title: "Scan Tubuh",
+            title: "Pindai Tubuh",
             content: {
                 GeometryReader { geo in
                     let availableHeight = geo.size.height

@@ -14,10 +14,10 @@ struct ResultScreen: View {
 
     var body: some View {
         PageWrapper(
-            title: "Hasil Scan Tubuh",
+            title: "Hasil Pindai Tubuh",
             content: {
                 VStack(alignment: .leading, spacing: 24) {
-                    Subtitle("Berhasil! Di bawah ini adalah hasil scanning tubuh Anda. Jika dirasa ada yang kurang tepat, silahkan pindai ulang kapan saja.")
+                    Subtitle("Berhasil! Di bawah ini adalah hasil pemindaian tubuh Anda. Jika dirasa ada yang kurang tepat, silahkan pindai ulang kapan saja.")
                     card
                 }
             },

@@ -291,20 +291,49 @@ enum OnDeviceRAG {
     /// Returns nil when the output isn't valid/usable so the caller can fall back to the
     /// deterministic plan. Defensive: strips markdown fences, keeps only the known
     /// exercises, and clamps numbers.
-    static func parse(_ raw: String, result: AssessmentResult) -> (analysis: String, plan: [Workout], weeklySchedule: String?)? {
+    // MARK: - Robust JSON & String Sanitization
+
+    private static func cleanJSONString(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let open = s.firstIndex(of: "{"), let close = s.lastIndex(of: "}") {
             s = String(s[open...close])
         }
+
+        // Remove trailing commas before } or ]
+        if let regex = try? NSRegularExpression(pattern: ",\\s*([}\\]])", options: []) {
+            let range = NSRange(location: 0, length: s.utf16.count)
+            s = regex.stringByReplacingMatches(in: s, options: [], range: range, withTemplate: "$1")
+        }
+
+        return s
+    }
+
+    /// Normalizes exercise name variations from LLM to known WorkoutKind.
+    private static func matchWorkoutKind(_ raw: String) -> WorkoutKind? {
+        if let exact = WorkoutKind(rawValue: raw) { return exact }
+        let clean = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if clean.contains("sit") { return .sitToStand }
+        if clean.contains("step") { return .stepUp }
+        if clean.contains("calf") { return .calfRaise }
+        return nil
+    }
+
+    /// Parse the model's JSON reply → (analysis text, structured plan, weekly schedule).
+    /// Returns nil when the output isn't valid/usable so the caller can fall back to the
+    /// deterministic plan. Defensive: strips markdown fences, handles trailing commas,
+    /// normalizes exercise names, and clamps numbers.
+    static func parse(_ raw: String, result: AssessmentResult) -> (analysis: String, plan: [Workout], weeklySchedule: String?)? {
+        if raw.contains("[Error generating response") { return nil }
+
+        let s = cleanJSONString(raw)
         guard let data = s.data(using: .utf8),
               let out = try? JSONDecoder().decode(LLMOutput.self, from: data) else { return nil }
 
         let prescribedIntensity = ExercisePlan.prescribedIntensity(for: result)
 
-        // Keep only the known exercises (WorkoutKind validates the LLM's string)
-        // and clamp the numbers.
+        // Keep only known exercises with tolerant matching and clamped numbers.
         let plan = out.exercises.compactMap { w -> Workout? in
-            guard let kind = WorkoutKind(rawValue: w.exercise) else { return nil }
+            guard let kind = matchWorkoutKind(w.exercise) else { return nil }
             return Workout(
                 kind: kind,
                 intensity: prescribedIntensity,
@@ -323,12 +352,14 @@ enum OnDeviceRAG {
     }
 
     /// Best-effort extraction of just the "insight" text from raw LLM output.
-    /// Handles cases where the full JSON can't be decoded (e.g. malformed
-    /// exercises array) but the insight string is still there and readable.
-    /// Returns nil when nothing useful can be salvaged.
+    /// Handles multiline insight, unescaped newlines in JSON, regex extraction,
+    /// and plain language responses while filtering out generation errors.
     static func extractInsight(from raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+
+        // Ignore error text from streaming failure
+        if trimmed.contains("[Error generating response") { return nil }
 
         // 1. Try to pull just the "insight" value via partial JSON decode.
         if let open = trimmed.firstIndex(of: "{"),
@@ -338,17 +369,124 @@ enum OnDeviceRAG {
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let insight = obj["insight"] as? String {
                 let clean = insight.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !clean.isEmpty { return clean }
+                if !clean.isEmpty && !clean.contains("[Error") { return clean }
             }
         }
 
-        // 2. If the raw text doesn't look like JSON at all, it might be a
-        //    plain-language response — return it directly.
-        if !trimmed.contains("{\"insight") && !trimmed.contains("{\"exercises") {
-            return trimmed
+        // 2. Multiline regex match for "insight" field (handles literal newlines inside quotes).
+        let pattern = #""insight"\s*:\s*"((?:[^"\\]|\\.)*)""#
+        if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
+           match.numberOfRanges > 1,
+           let r = Range(match.range(at: 1), in: trimmed) {
+            let extracted = String(trimmed[r])
+                .replacingOccurrences(of: "\\n", with: "\n")
+                .replacingOccurrences(of: "\\\"", with: "\"")
+                .replacingOccurrences(of: "\\\\", with: "\\")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !extracted.isEmpty && !extracted.contains("[Error") {
+                return extracted
+            }
+        }
+
+        // 3. Regex match for truncated insight (when tokens cut off before the closing quote).
+        let truncatedPattern = #""insight"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"#
+        if let regex = try? NSRegularExpression(pattern: truncatedPattern, options: [.dotMatchesLineSeparators]),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
+           match.numberOfRanges > 1,
+           let r = Range(match.range(at: 1), in: trimmed) {
+            let extracted = String(trimmed[r])
+                .replacingOccurrences(of: "\\n", with: "\n")
+                .replacingOccurrences(of: "\\\"", with: "\"")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if extracted.count > 25 && !extracted.contains("[Error") {
+                return extracted
+            }
+        }
+
+        // 4. Plain-language response fallback (if model replied in prose without JSON).
+        if !trimmed.contains("{\"insight") && !trimmed.contains("{\"exercises") && !trimmed.contains("\"insight\"") {
+            if trimmed.count > 20 && !trimmed.contains("[Error") {
+                return trimmed
+            }
         }
 
         return nil
+    }
+
+    /// Generates a comprehensive deterministic condition analysis when the LLM
+    /// cannot generate or after retries fail. Based on AWGS 2019 guidelines and
+    /// the user's specific anthropometrics, physical test, and clinical flags.
+    static func fallbackAnalysis(for result: AssessmentResult, user: User, reason: String? = nil) -> String {
+        var paragraphs: [String] = []
+
+        if let reason, !reason.isEmpty {
+            paragraphs.append("📌 Catatan Sistem: \(reason)")
+        }
+
+        // 1. Overall risk and demographic summary
+        let ageStr = user.age.map { "\($0) tahun" } ?? "dewasa"
+        let genderStr = user.gender?.rawValue.lowercased() ?? "individu"
+        let riskDesc: String
+        switch result.overallRisk {
+        case .low:
+            riskDesc = "menunjukkan estimasi risiko sarkopenia yang rendah. Kondisi fisik dan massa otot Anda berada dalam rentang baik untuk usia Anda."
+        case .mid:
+            riskDesc = "menunjukkan sinyal awal potensi penurunan massa atau kekuatan otot (risiko menengah). Langkah preventif melalui latihan teratur sangat disarankan."
+        case .high:
+            riskDesc = "mengindikasikan risiko tinggi terkait penurunan massa dan kekuatan otot. Diperlukan perhatian khusus pada penguatan otot secara bertahap dan pemenuhan nutrisi protein."
+        case .severe:
+            riskDesc = "menunjukkan indikasi risiko tinggi yang disertai keterbatasan performa fisik. Program latihan harus dilakukan dengan sangat hati-hati, berfokus pada keselamatan dan stabilitas gerak."
+        case .unassessed:
+            riskDesc = "memerlukan pemantauan berkala karena sebagian data pengukuran masih belum lengkap."
+        }
+        paragraphs.append("Berdasarkan evaluasi skrining untuk \(genderStr) berusia \(ageStr), profil Anda \(riskDesc)")
+
+        // 2. Muscle mass & body measurement indicators
+        var bodyPoints: [String] = []
+        if let calf = user.calf {
+            let calfStatus = result.muscleMassStatus == .abnormal ? "di bawah ambang batas acuan AWGS" : "dalam rentang normal"
+            bodyPoints.append("Lingkar betis tercatat \(calf) cm (\(calfStatus))")
+        }
+        if let waist = user.waist {
+            let waistNote = !result.obesityFlags.isEmpty ? " (terdapat indikasi perhatian pada lingkar pinggang)" : ""
+            bodyPoints.append("lingkar pinggang \(waist) cm\(waistNote)")
+        }
+        if let h = user.height, let w = user.weight, h > 0 {
+            let hm = h / 100.0
+            let bmi = (w / (hm * hm)).rounded(toPlaces: 1)
+            bodyPoints.append("Indeks Massa Tubuh (IMT) \(bmi) kg/m²")
+        }
+        if !bodyPoints.isEmpty {
+            paragraphs.append("Pengukuran fisik menunjukkan: \(bodyPoints.joined(separator: ", ")). Status massa otot tergolong \(statusLabel(result.muscleMassStatus)).")
+        }
+
+        // 3. Physical test / Strength indicators
+        if let ability = result.exerciseAbility {
+            var repDetails: [String] = []
+            if let sit = ability.sitToStandReps {
+                repDetails.append("Sit to Stand: \(sit) repetisi")
+            }
+            if let step = ability.stepUpReps {
+                repDetails.append("Step Up: \(step) repetisi")
+            }
+            if let calf = ability.calfRaiseReps {
+                repDetails.append("Calf Raise: \(calf) repetisi")
+            }
+            let repSummary = repDetails.isEmpty ? "Tes fisik telah diselesaikan" : "Hasil tes kekuatan 30 detik: \(repDetails.joined(separator: ", "))"
+            paragraphs.append("\(repSummary). Status kekuatan otot tubuh bagian bawah dinilai \(statusLabel(result.strengthStatus)).")
+        }
+
+        // 4. Clinical cautions & recommendation
+        if result.workoutRestriction == .mobilityOnly {
+            paragraphs.append("Catatan keselamatan: Terdapat indikasi pembatasan latihan. Disarankan fokus pada gerakan mobilitas ringan dan keseimbangan dengan berpegangan, serta konsultasikan dengan tenaga medis sebelum memulai latihan berintensitas lebih tinggi.")
+        } else if !result.redFlags.isEmpty {
+            paragraphs.append("Perhatian: Ditemukan tanda kehati-hatian (\(result.redFlags.joined(separator: ", "))). Lakukan latihan secara perlahan, bernapas normal tanpa menahan napas, dan segera istirahat apabila timbul rasa pusing atau nyeri.")
+        } else {
+            paragraphs.append("Rekomendasi: Lakukan program latihan terstruktur secara konsisten, prioritaskan kontrol dan kualitas gerakan, serta jaga asupan gizi seimbang untuk memelihara fungsi otot.")
+        }
+
+        return paragraphs.joined(separator: "\n\n")
     }
 
     // The model emits `{"exercise":"Sit to Stand", …}`; decode that shape, then

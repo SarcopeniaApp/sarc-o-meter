@@ -27,7 +27,7 @@ struct ScanIntroView: View {
                 }
             },
             footer: {
-                PrimaryButton(title: "Mulai scan", action: onBeginScan)
+                PrimaryButton(title: "Mulai Pindai", action: onBeginScan)
             },
             onBack: onBack
         )

@@ -30,26 +30,171 @@ final class LLMManager {
     var outputText = ""
     var isLoading = false
     var isLoaded = false
+    var isDownloaded = false
     var progressText = ""
     var progressValue = 0.0
+    var downloadedMB: Double = 0
+    var totalMB: Double = 0
+    var lastError: String? = nil
 
     private var container: ModelContainer?
     private var instructions: String?
+
+    var isReady: Bool {
+        isLoaded && container != nil
+    }
 
     // Swap this id to change model (all from the `mlx-community` HF org):
     //   Qwen2.5-3B-Instruct-4bit   ~1.8 GB · multilingual · needs an ~8 GB-RAM iPhone
     //   Qwen3-4B-4bit              ~2.3 GB · newer/stronger · high-RAM device
     //   Qwen2.5-1.5B-Instruct-4bit ~1.0 GB · lighter/faster fallback
-    private let modelID = "mlx-community/Qwen2.5-3B-Instruct-4bit"
+    let modelID = "mlx-community/Qwen2.5-3B-Instruct-4bit"
+    let modelName = "Qwen 2.5 3B Instruct (4-bit)"
+    let modelSize = "~1.8 GB"
+
+    static let expectedModelBytes: Int64 = 1_747_851_324 // ~1666.88 MB
+    static let expectedModelMB: Double = 1666.88
+
+    init() {
+        self.totalMB = Self.expectedModelMB
+        if Self.isModelCachedOnDisk() {
+            self.isDownloaded = true
+            self.isLoaded = false
+            self.downloadedMB = Self.expectedModelMB
+            self.progressValue = 1.0
+            self.progressText = "Model siap dimuat."
+        } else {
+            self.isDownloaded = false
+            self.isLoaded = false
+            self.downloadedMB = 0.0
+            self.progressValue = 0.0
+            self.progressText = "Downloading…"
+        }
+    }
+
+    /// Real-time URLSession download progress tracker that observes bytes received across all download tasks.
+    private final class LLMDownloadDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        private let onProgress: @Sendable (Int64, Double) -> Void
+        private let totalExpectedBytes: Int64
+        private let lock = NSLock()
+        private var taskDownloadedBytes: [Int: Int64] = [:]
+        private var observations: [Int: NSKeyValueObservation] = [:]
+        private var lastReportedTime: CFAbsoluteTime = 0
+        private var lastReportedBytes: Int64 = 0
+
+        init(totalExpectedBytes: Int64, onProgress: @escaping @Sendable (Int64, Double) -> Void) {
+            self.totalExpectedBytes = totalExpectedBytes
+            self.onProgress = onProgress
+        }
+
+        func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+            // ONLY track actual download tasks (GET file downloads), ignore HEAD preflight and API data tasks!
+            guard task is URLSessionDownloadTask else { return }
+            guard task.originalRequest?.httpMethod == "GET" || task.originalRequest?.httpMethod == nil else { return }
+
+            let taskID = task.taskIdentifier
+
+            // Track actual raw bytes received via KVO (fires continuously as network buffers arrive)
+            let observation = task.observe(\.countOfBytesReceived, options: [.new]) { [weak self] t, _ in
+                guard let self else { return }
+                let bytes = t.countOfBytesReceived
+                guard bytes > 0 else { return }
+
+                self.lock.lock()
+                self.taskDownloadedBytes[taskID] = bytes
+                self.updateProgressLocked()
+                self.lock.unlock()
+            }
+
+            lock.lock()
+            observations[taskID] = observation
+            lock.unlock()
+        }
+
+        func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+            guard task is URLSessionDownloadTask else { return }
+
+            let taskID = task.taskIdentifier
+            let finalBytes = task.countOfBytesReceived
+
+            lock.lock()
+            if error == nil && finalBytes > 0 {
+                taskDownloadedBytes[taskID] = max(taskDownloadedBytes[taskID] ?? 0, finalBytes)
+            }
+            observations.removeValue(forKey: taskID)
+            self.updateProgressLocked(force: true)
+            lock.unlock()
+        }
+
+        private func updateProgressLocked(force: Bool = false) {
+            let sumBytes = taskDownloadedBytes.values.reduce(0, +)
+            let fraction = min(1.0, max(0.0, Double(sumBytes) / Double(totalExpectedBytes)))
+
+            let now = CFAbsoluteTimeGetCurrent()
+            // Throttle to every 100ms or 1MB delta to keep main UI smooth and responsive
+            if force || now - lastReportedTime >= 0.1 || (sumBytes - lastReportedBytes) >= 1_000_000 || fraction >= 1.0 {
+                lastReportedTime = now
+                lastReportedBytes = sumBytes
+                onProgress(sumBytes, fraction)
+            }
+        }
+    }
+
+    /// Finds the snapshot directory containing the valid, fully-downloaded model files on local disk.
+    static func localModelDirectory() -> URL? {
+        let fileManager = FileManager.default
+        var candidateRoots: [URL] = []
+
+        if let repoID = Repo.ID(rawValue: "mlx-community/Qwen2.5-3B-Instruct-4bit") {
+            let snapshots = HubCache.default.snapshotsDirectory(repo: repoID, kind: .model)
+            candidateRoots.append(snapshots)
+        }
+
+        let standardHubCandidates: [URL] = [
+            URL.cachesDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots"),
+            URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".cache/huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots"),
+            URL.applicationSupportDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots")
+        ]
+        candidateRoots.append(contentsOf: standardHubCandidates)
+
+        for snapshotsDir in candidateRoots {
+            guard fileManager.fileExists(atPath: snapshotsDir.path) else { continue }
+            guard let commitDirs = try? fileManager.contentsOfDirectory(at: snapshotsDir, includingPropertiesForKeys: nil) else { continue }
+            for commitDir in commitDirs {
+                let configFile = commitDir.appendingPathComponent("config.json")
+                let modelFile = commitDir.appendingPathComponent("model.safetensors")
+                let tokenizerFile = commitDir.appendingPathComponent("tokenizer.json")
+
+                if fileManager.fileExists(atPath: configFile.path) &&
+                   fileManager.fileExists(atPath: modelFile.path) &&
+                   fileManager.fileExists(atPath: tokenizerFile.path) {
+                    let realPath = modelFile.resolvingSymlinksInPath().path
+                    if let attrs = try? fileManager.attributesOfItem(atPath: realPath),
+                       let size = attrs[.size] as? Int64,
+                       size >= 1_500_000_000 {
+                        return commitDir
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Checks candidate directories for the cached model (~1.65 GB weights), resolving symlinks.
+    static func isModelCachedOnDisk() -> Bool {
+        return localModelDirectory() != nil
+    }
 
     private var loadTask: Task<Void, Never>?
 
-    /// Idempotent: the launch preload and the analysis step both call this, so
-    /// concurrent callers join the same in-flight load rather than downloading twice.
+    /// Idempotent: callers join the same in-flight load rather than downloading twice.
     @MainActor
     func loadModel() async {
-        if isLoaded { return }
-        if let loadTask { await loadTask.value; return }
+        if isReady { return }
+        if let existing = loadTask {
+            await existing.value
+            if isReady { return }
+        }
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.performLoad()
@@ -60,156 +205,102 @@ final class LLMManager {
 
     @MainActor
     private func performLoad() async {
-        let cached = isModelCached()
+        if isReady { return }
+        isLoading = true
+        lastError = nil
 
-        if cached {
-            // Model sudah ada di cache — load langsung tanpa banner download
-            print("[MLX] Model cached, loading silently…")
+        // Step 1: Fast local disk load if the model is already downloaded
+        if let localDir = Self.localModelDirectory() {
+            isDownloaded = true
+            downloadedMB = Self.expectedModelMB
+            totalMB = Self.expectedModelMB
+            progressValue = 1.0
+            progressText = "Memuat model ke memori…"
+
             do {
                 container = try await loadModelContainer(
-                    from: #hubDownloader(),
-                    using: #huggingFaceTokenizerLoader(),
-                    id: modelID
+                    from: localDir,
+                    using: #huggingFaceTokenizerLoader()
                 )
                 isLoaded = true
-                print("MLX model loaded from cache: \(modelID)")
+                progressText = "Model loaded."
+                print("MLX model loaded from local disk: \(localDir.path)")
+                isLoading = false
+                return
             } catch {
-                print("MLX load from cache failed: \(error)")
+                print("Local disk load failed, will attempt downloader: \(error)")
+                lastError = error.localizedDescription
             }
-            return
         }
 
-        // Model belum ada — tampilkan banner download + Live Activity
-        isLoading = true
+        // Step 2: Download via HubClient
+        isDownloaded = false
         isLoaded = false
-        progressText = "Downloading… 0%"
         progressValue = 0.0
-
-        var currentPercent = 0
-        let totalMB = 1665.3
-        var isFinished = false
-
-        ModelDownloadActivityManager.shared.startActivity(modelName: "Qwen 2.5 3B AI")
-
-        let reportProgress: @MainActor (Int) -> Void = { [weak self] percent in
-            guard let self else { return }
-            let frac = Double(percent) / 100.0
-            self.progressValue = frac
-            let currentMB = (Double(percent) / 100.0) * totalMB
-            if percent == 100 {
-                self.progressText = "Model loaded."
-            } else {
-                self.progressText = String(format: "Downloading… %d%% (%.1f / %.1f MB)", percent, currentMB, totalMB)
-            }
-            print(String(format: "[MLX dl] %d%% (%.1f / %.1f MB)", percent, currentMB, totalMB))
-
-            ModelDownloadActivityManager.shared.updateProgress(
-                percent: percent,
-                progressValue: frac,
-                text: self.progressText
-            )
-        }
-
-        // Task tunggal yang mengalirkan progres 0% → 100% secara mulus dan kontinu.
-        // Fase 1 (downloading): naik perlahan dari 0→95% menggunakan kurva ease-out
-        //   agar terasa natural (cepat di awal, makin pelan mendekati 95%).
-        // Fase 2 (setelah download selesai): lanjut 95→100% dengan kecepatan tetap.
-        let progressTask = Task { @MainActor in
-            let tickMs: UInt64 = 100_000_000  // 100ms per tick
-            var elapsed: Double = 0.0
-
-            while currentPercent < 100 && !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: tickMs)
-                elapsed += 0.1
-
-                if isFinished {
-                    // Fase 2: download selesai, isi sisa ke 100% dengan kecepatan tetap
-                    currentPercent = min(currentPercent + 2, 100)
-                } else {
-                    // Fase 1: kurva ease-out logaritmik, maks 95%
-                    // progress = 95 * (1 - e^(-elapsed/timeConstant))
-                    let timeConstant: Double = 18.0
-                    let eased = 95.0 * (1.0 - exp(-elapsed / timeConstant))
-                    let target = min(Int(eased), 95)
-                    if target > currentPercent {
-                        currentPercent = target
-                    }
-                }
-
-                reportProgress(currentPercent)
-            }
-        }
+        downloadedMB = 0.0
+        progressText = "Downloading…"
 
         do {
-            container = try await loadModelContainer(
-                from: #hubDownloader(),
-                using: #huggingFaceTokenizerLoader(),
-                id: modelID
-            )
-            
-            isFinished = true
-            // Tunggu hingga progressTask menyelesaikan alirannya sampai 100% secara mulus
-            await progressTask.value
-
-            isLoaded = true
-            progressText = "Model loaded."
-            progressValue = 1.0
-            print("MLX model loaded: \(modelID)")
-            ModelDownloadActivityManager.shared.stopActivity()
-        } catch {
-            isFinished = true
-            progressTask.cancel()
-            progressText = "Failed to load model: \(error.localizedDescription)"
-            print("MLX load failed: \(error)")
-            ModelDownloadActivityManager.shared.stopActivity()
-        }
-        isLoading = false
-    }
-
-    /// Cek apakah model sudah ter-cache di folder HuggingFace Hub lokal.
-    /// HF Hub menyimpan model di: Caches/huggingface/hub/models--{org}--{name}/snapshots/
-    private func isModelCached() -> Bool {
-        let fm = FileManager.default
-        guard let cacheDir = fm.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return false
-        }
-        // modelID "mlx-community/Qwen2.5-3B-Instruct-4bit" → "models--mlx-community--Qwen2.5-3B-Instruct-4bit"
-        let folderName = "models--" + modelID.replacingOccurrences(of: "/", with: "--")
-        let snapshotsDir = cacheDir
-            .appendingPathComponent("huggingface/hub", isDirectory: true)
-            .appendingPathComponent(folderName, isDirectory: true)
-            .appendingPathComponent("snapshots", isDirectory: true)
-
-        // Jika folder snapshots ada dan tidak kosong, model sudah pernah diunduh
-        guard let contents = try? fm.contentsOfDirectory(atPath: snapshotsDir.path),
-              !contents.isEmpty else {
-            return false
-        }
-        return true
-    }
-
-    /// Menghitung total ukuran berkas yang terunduh di folder Cache HuggingFace / tmp
-    private func getDownloadedCacheBytesMB() -> Double {
-        let fm = FileManager.default
-        let cacheUrls = fm.urls(for: .cachesDirectory, in: .userDomainMask)
-        guard let cacheDir = cacheUrls.first else { return 0.0 }
-        
-        let hfDir = cacheDir.appendingPathComponent("huggingface", isDirectory: true)
-        let tmpDir = fm.temporaryDirectory
-
-        func directorySize(at url: URL) -> Int64 {
-            guard let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else { return 0 }
-            var total: Int64 = 0
-            for case let fileURL as URL in enumerator {
-                if let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
-                    total += Int64(size)
+            let delegate = LLMDownloadDelegate(totalExpectedBytes: Self.expectedModelBytes) { [weak self] sumBytes, fraction in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if fraction >= self.progressValue || self.progressValue == 0 {
+                        self.progressValue = fraction
+                        self.downloadedMB = Double(sumBytes) / (1024.0 * 1024.0)
+                        self.progressText = String(format: "Downloading… %.0f / %.0f MB", min(self.downloadedMB, self.totalMB), self.totalMB)
+                    }
                 }
             }
-            return total
-        }
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let hubClient = HubClient(session: session)
 
-        let totalBytes = directorySize(at: hfDir) + directorySize(at: tmpDir)
-        return Double(totalBytes) / 1_048_576
+            container = try await loadModelContainer(
+                from: #hubDownloader(hubClient),
+                using: #huggingFaceTokenizerLoader(),
+                id: modelID,
+                progressHandler: { _ in }
+            )
+            session.finishTasksAndInvalidate()
+
+            isDownloaded = true
+            isLoaded = true
+            downloadedMB = Self.expectedModelMB
+            totalMB = Self.expectedModelMB
+            progressValue = 1.0
+            progressText = "Model loaded."
+            print("MLX model downloaded and loaded: \(modelID)")
+        } catch {
+            lastError = error.localizedDescription
+            progressText = "Failed to load model: \(error.localizedDescription)"
+            print("MLX load failed: \(error)")
+
+            // Recovery: Check if the snapshot finished downloading to disk despite the error
+            if let localDir = Self.localModelDirectory() {
+                do {
+                    container = try await loadModelContainer(
+                        from: localDir,
+                        using: #huggingFaceTokenizerLoader()
+                    )
+                    isDownloaded = true
+                    isLoaded = true
+                    downloadedMB = Self.expectedModelMB
+                    totalMB = Self.expectedModelMB
+                    progressValue = 1.0
+                    progressText = "Model loaded."
+                    lastError = nil
+                    print("MLX model recovered and loaded from local disk cache!")
+                    isLoading = false
+                    return
+                } catch {
+                    print("Recovery from disk cache also failed: \(error)")
+                }
+            }
+
+            container = nil
+            isLoaded = false
+            loadTask = nil
+        }
+        isLoading = false
     }
 
     /// System prompt applied to the next generation (ChatSession `instructions`).
@@ -219,7 +310,15 @@ final class LLMManager {
 
     @MainActor
     func sendMessage(_ prompt: String) async -> String? {
-        guard let container else { return nil }
+        // If container is not loaded yet, attempt to load it immediately
+        if container == nil {
+            await loadModel()
+        }
+
+        guard let container else {
+            lastError = "Model container is nil (model not loaded or not downloaded)"
+            return nil
+        }
         isLoading = true
         outputText = ""
         defer { isLoading = false }
@@ -232,6 +331,7 @@ final class LLMManager {
                 outputText += chunk
             }
         } catch {
+            lastError = error.localizedDescription
             outputText += "\n[Error generating response: \(error.localizedDescription)]"
         }
         return outputText
