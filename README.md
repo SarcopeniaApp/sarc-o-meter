@@ -78,7 +78,7 @@ TestFlight Beta: https://testflight.apple.com/join/87X3gjtV
 Clone the repository and install CocoaPods dependencies:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/SarcopeniaApp/sarc-o-meter.git
 cd sarc-o-meter-main
 pod install
 ```
