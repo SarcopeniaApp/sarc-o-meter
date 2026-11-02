@@ -39,7 +39,7 @@ struct LLMDownloadCard: View {
     var llm: LLMManager
 
     var body: some View {
-        let isDone = llm.isLoaded
+        let isDone = llm.isDownloaded || llm.isLoaded
         let rawPercent = Int(round(min(1.0, max(0.0, llm.progressValue)) * 100))
         // Cap at 99% while downloading/loading weights so 100% is only shown when truly finished and green
         let percentage = isDone ? 100 : (llm.downloadedMB > 0 ? max(1, min(99, rawPercent)) : 0)
@@ -123,7 +123,7 @@ struct LLMDownloadCard: View {
 
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color(UIColor.systemGray5))
+                            .fill(Color(red: 0.90, green: 0.89, blue: 0.88))
                             .frame(width: totalWidth, height: 6)
 
                         if fillWidth > 0 {

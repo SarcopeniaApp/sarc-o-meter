@@ -16,6 +16,7 @@ struct DiagnosisView: View {
     var isFallback: Bool = false
     var isPlanFallback: Bool = false
     var fallbackReason: String? = nil
+    var llm: LLMManager? = nil
     var onRetry: (() -> Void)? = nil
     let onFinish: () -> Void
 
@@ -124,13 +125,26 @@ struct DiagnosisView: View {
         if isGenerating {
             VStack(spacing: 14) {
                 ProgressView().tint(Theme.accent)
-                Text("Menyusun analisis kondisi di perangkat…")
-                    .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                if let llm, !llm.isReady {
+                    if llm.progressValue > 0 && llm.progressValue < 1.0 {
+                        let pct = Int(round(min(1.0, max(0.0, llm.progressValue)) * 100))
+                        Text("Sedang menyelesaikan unduhan model AI (\(pct)%)…")
+                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.ink)
+                        Text(String(format: "%.0f / %.0f MB", min(llm.downloadedMB, llm.totalMB), llm.totalMB))
+                            .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    } else {
+                        Text("Memuat model AI ke memori perangkat…")
+                            .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                    }
+                } else {
+                    Text("Menyusun analisis kondisi di perangkat…")
+                        .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                }
             }
             .frame(maxWidth: .infinity).padding(.vertical, 28)
         } else if let analysis, !analysis.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Analisis Kondisi", systemImage: "text.bubble.fill")
+                Label("Analisis Kondisi", systemImage: isFallback ? "text.bubble.fill" : "sparkles")
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
 
                 // Note explaining fallback reason if applicable

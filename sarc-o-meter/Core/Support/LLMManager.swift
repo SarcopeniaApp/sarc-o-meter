@@ -30,6 +30,7 @@ final class LLMManager {
     var outputText = ""
     var isLoading = false
     var isLoaded = false
+    var isDownloaded = false
     var progressText = ""
     var progressValue = 0.0
     var downloadedMB: Double = 0
@@ -38,6 +39,10 @@ final class LLMManager {
 
     private var container: ModelContainer?
     private var instructions: String?
+
+    var isReady: Bool {
+        isLoaded && container != nil
+    }
 
     // Swap this id to change model (all from the `mlx-community` HF org):
     //   Qwen2.5-3B-Instruct-4bit   ~1.8 GB · multilingual · needs an ~8 GB-RAM iPhone
@@ -53,11 +58,13 @@ final class LLMManager {
     init() {
         self.totalMB = Self.expectedModelMB
         if Self.isModelCachedOnDisk() {
-            self.isLoaded = true
+            self.isDownloaded = true
+            self.isLoaded = false
             self.downloadedMB = Self.expectedModelMB
             self.progressValue = 1.0
-            self.progressText = "Model loaded."
+            self.progressText = "Model siap dimuat."
         } else {
+            self.isDownloaded = false
             self.isLoaded = false
             self.downloadedMB = 0.0
             self.progressValue = 0.0
@@ -133,53 +140,60 @@ final class LLMManager {
         }
     }
 
-    /// Checks candidate directories for the cached model (~1.65 GB weights), resolving symlinks.
-    static func isModelCachedOnDisk() -> Bool {
+    /// Finds the snapshot directory containing the valid, fully-downloaded model files on local disk.
+    static func localModelDirectory() -> URL? {
         let fileManager = FileManager.default
+        var candidateRoots: [URL] = []
 
         if let repoID = Repo.ID(rawValue: "mlx-community/Qwen2.5-3B-Instruct-4bit") {
-            if let path = HubCache.default.cachedFilePath(repo: repoID, kind: .model, revision: "main", filename: "model.safetensors"),
-               fileManager.fileExists(atPath: path.path) {
-                return true
-            }
+            let snapshots = HubCache.default.snapshotsDirectory(repo: repoID, kind: .model)
+            candidateRoots.append(snapshots)
         }
 
-        var candidatePaths: [URL] = [
-            URL.cachesDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit"),
-            URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".cache/huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit"),
-            URL.applicationSupportDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit")
+        let standardHubCandidates: [URL] = [
+            URL.cachesDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots"),
+            URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".cache/huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots"),
+            URL.applicationSupportDirectory.appendingPathComponent("huggingface/hub/models--mlx-community--Qwen2.5-3B-Instruct-4bit/snapshots")
         ]
+        candidateRoots.append(contentsOf: standardHubCandidates)
 
-        if let repoID = Repo.ID(rawValue: "mlx-community/Qwen2.5-3B-Instruct-4bit") {
-            let hubDir = HubCache.default.repoDirectory(repo: repoID, kind: .model)
-            candidatePaths.insert(hubDir, at: 0)
-        }
+        for snapshotsDir in candidateRoots {
+            guard fileManager.fileExists(atPath: snapshotsDir.path) else { continue }
+            guard let commitDirs = try? fileManager.contentsOfDirectory(at: snapshotsDir, includingPropertiesForKeys: nil) else { continue }
+            for commitDir in commitDirs {
+                let configFile = commitDir.appendingPathComponent("config.json")
+                let modelFile = commitDir.appendingPathComponent("model.safetensors")
+                let tokenizerFile = commitDir.appendingPathComponent("tokenizer.json")
 
-        for dir in candidatePaths {
-            guard fileManager.fileExists(atPath: dir.path) else { continue }
-            guard let enumerator = fileManager.enumerator(at: dir, includingPropertiesForKeys: nil) else { continue }
-            for case let fileURL as URL in enumerator {
-                let realPath = fileURL.resolvingSymlinksInPath().path
-                if let attrs = try? fileManager.attributesOfItem(atPath: realPath),
-                   let size = attrs[.size] as? Int64,
-                   size >= 1_500_000_000 {
-                    return true
+                if fileManager.fileExists(atPath: configFile.path) &&
+                   fileManager.fileExists(atPath: modelFile.path) &&
+                   fileManager.fileExists(atPath: tokenizerFile.path) {
+                    let realPath = modelFile.resolvingSymlinksInPath().path
+                    if let attrs = try? fileManager.attributesOfItem(atPath: realPath),
+                       let size = attrs[.size] as? Int64,
+                       size >= 1_500_000_000 {
+                        return commitDir
+                    }
                 }
             }
         }
-        return false
+        return nil
+    }
+
+    /// Checks candidate directories for the cached model (~1.65 GB weights), resolving symlinks.
+    static func isModelCachedOnDisk() -> Bool {
+        return localModelDirectory() != nil
     }
 
     private var loadTask: Task<Void, Never>?
 
-    /// Idempotent: the launch preload and the analysis step both call this, so
-    /// concurrent callers join the same in-flight load rather than downloading twice.
+    /// Idempotent: callers join the same in-flight load rather than downloading twice.
     @MainActor
     func loadModel() async {
-        if isLoaded && container != nil { return }
+        if isReady { return }
         if let existing = loadTask {
             await existing.value
-            if isLoaded && container != nil { return }
+            if isReady { return }
         }
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -191,18 +205,40 @@ final class LLMManager {
 
     @MainActor
     private func performLoad() async {
+        if isReady { return }
         isLoading = true
-        if !Self.isModelCachedOnDisk() {
-            isLoaded = false
-            progressValue = 0.0
-            downloadedMB = 0.0
-            progressText = "Downloading…"
-        } else {
-            isLoaded = true
-            progressValue = 1.0
+        lastError = nil
+
+        // Step 1: Fast local disk load if the model is already downloaded
+        if let localDir = Self.localModelDirectory() {
+            isDownloaded = true
             downloadedMB = Self.expectedModelMB
-            progressText = "Model loaded."
+            totalMB = Self.expectedModelMB
+            progressValue = 1.0
+            progressText = "Memuat model ke memori…"
+
+            do {
+                container = try await loadModelContainer(
+                    from: localDir,
+                    using: #huggingFaceTokenizerLoader()
+                )
+                isLoaded = true
+                progressText = "Model loaded."
+                print("MLX model loaded from local disk: \(localDir.path)")
+                isLoading = false
+                return
+            } catch {
+                print("Local disk load failed, will attempt downloader: \(error)")
+                lastError = error.localizedDescription
+            }
         }
+
+        // Step 2: Download via HubClient
+        isDownloaded = false
+        isLoaded = false
+        progressValue = 0.0
+        downloadedMB = 0.0
+        progressText = "Downloading…"
 
         do {
             let delegate = LLMDownloadDelegate(totalExpectedBytes: Self.expectedModelBytes) { [weak self] sumBytes, fraction in
@@ -218,24 +254,48 @@ final class LLMManager {
             let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
             let hubClient = HubClient(session: session)
 
-            // The id-based loader needs a downloader + tokenizer loader injected;
-            // the MLXHuggingFace macros provide the HuggingFace implementations.
             container = try await loadModelContainer(
                 from: #hubDownloader(hubClient),
                 using: #huggingFaceTokenizerLoader(),
                 id: modelID,
                 progressHandler: { _ in }
             )
+            session.finishTasksAndInvalidate()
+
+            isDownloaded = true
             isLoaded = true
             downloadedMB = Self.expectedModelMB
             totalMB = Self.expectedModelMB
             progressValue = 1.0
             progressText = "Model loaded."
-            print("MLX model loaded: \(modelID)")
+            print("MLX model downloaded and loaded: \(modelID)")
         } catch {
             lastError = error.localizedDescription
             progressText = "Failed to load model: \(error.localizedDescription)"
             print("MLX load failed: \(error)")
+
+            // Recovery: Check if the snapshot finished downloading to disk despite the error
+            if let localDir = Self.localModelDirectory() {
+                do {
+                    container = try await loadModelContainer(
+                        from: localDir,
+                        using: #huggingFaceTokenizerLoader()
+                    )
+                    isDownloaded = true
+                    isLoaded = true
+                    downloadedMB = Self.expectedModelMB
+                    totalMB = Self.expectedModelMB
+                    progressValue = 1.0
+                    progressText = "Model loaded."
+                    lastError = nil
+                    print("MLX model recovered and loaded from local disk cache!")
+                    isLoading = false
+                    return
+                } catch {
+                    print("Recovery from disk cache also failed: \(error)")
+                }
+            }
+
             container = nil
             isLoaded = false
             loadTask = nil
@@ -250,6 +310,11 @@ final class LLMManager {
 
     @MainActor
     func sendMessage(_ prompt: String) async -> String? {
+        // If container is not loaded yet, attempt to load it immediately
+        if container == nil {
+            await loadModel()
+        }
+
         guard let container else {
             lastError = "Model container is nil (model not loaded or not downloaded)"
             return nil

@@ -195,6 +195,7 @@ struct ContentView: View {
                     isFallback: isAnalysisFallback,
                     isPlanFallback: isPlanFallback,
                     fallbackReason: analysisFallbackReason,
+                    llm: llm,
                     onRetry: { runAnalysis() },
                     onFinish: { finishScreening() }
                 )
@@ -247,7 +248,13 @@ struct ContentView: View {
         step = .analysis
 
         Task {
-            await llm.loadModel()   // no-op if the shell already loaded it at launch
+            // Preload/wait for the model container
+            await llm.loadModel()
+
+            // If not ready yet, retry loading from local disk cache if available
+            if !llm.isReady && LLMManager.isModelCachedOnDisk() {
+                await llm.loadModel()
+            }
 
             let maxAttempts = 3
             var generatedAnalysis: String? = nil
@@ -255,7 +262,7 @@ struct ContentView: View {
             var generatedSchedule: String? = nil
             var lastRawOutput = ""
 
-            let modelReady = llm.isLoaded
+            let modelReady = llm.isReady
 
             if modelReady {
                 for attempt in 1...maxAttempts {
