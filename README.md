@@ -2,6 +2,8 @@
 
 Sarc-o-meter is an on-device iOS application for sarcopenia screening, anthropometric body estimation, and real-time functional exercise assessment. It combines Apple Core ML, Vision framework, MediaPipe pose tracking, and clinical evaluation rules (AWGS 2019) to deliver private, real-time assessment entirely on-device.
 
+![Application Screenshot](screenshot.jpg)
+
 TestFlight Beta: https://testflight.apple.com/join/87X3gjtV
 
 ---
